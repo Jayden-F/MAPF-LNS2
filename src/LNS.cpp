@@ -206,6 +206,8 @@ bool LNS::getInitialSolution()
         succ = runPIBT();
     else if (init_algo_name == "PPS")
         succ = runPPS();
+    else if (init_algo_name == "winPP")
+        succ = runWinPP(10);
     else if (init_algo_name == "winPIBT")
         succ = runWinPIBT();
     else if (init_algo_name == "CBS")
@@ -409,70 +411,86 @@ bool LNS::runPP()
         return false;
     }
 }
-bool LNS::runWPP(int window_size)
+bool LNS::runWinPP(int window_size)
 {
-    auto shuffled_agents = neighbor.agents;
-    std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
-    if (screen >= 2)
+    std::vector<std::vector<PathEntry>> windowed_paths = std::vector<std::vector<PathEntry>>();
+
+    bool is_planning_complete = false;
+    int planning_phases = 0;
+
+    while (!is_planning_complete)
     {
-        for (auto id : shuffled_agents)
-            cout << id << "(" << agents[id].path_planner->my_heuristic[agents[id].path_planner->start_location] << "->" << agents[id].path.size() - 1 << "), ";
-        cout << endl;
-    }
-    int remaining_agents = (int)shuffled_agents.size();
-    auto p = shuffled_agents.begin();
-    neighbor.sum_of_costs = 0;
-    runtime = ((fsec)(Time::now() - start_time)).count();
-    double T = time_limit - runtime; // time limit
-    if (!iteration_stats.empty())    // replan
-        T = min(T, replan_time_limit);
-    auto time = Time::now();
-    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
-    while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
-    {
-        int id = *p;
-        if (screen >= 3)
-            cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
-                 << "Agent " << agents[id].id << endl;
-        agents[id].path = agents[id].path_planner->findPath(constraint_table);
-        if (agents[id].path.empty())
-            break;
-        neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
-        if (neighbor.sum_of_costs >= neighbor.old_sum_of_costs)
-            break;
-        remaining_agents--;
-        path_table.insertPath(agents[id].id, agents[id].path[window_size]);
-        ++p;
-    }
-    if (remaining_agents == 0 && neighbor.sum_of_costs <= neighbor.old_sum_of_costs) // accept new paths
-    {
-        return true;
-    }
-    else // stick to old paths
-    {
-        if (p != shuffled_agents.end())
-            num_of_failures++;
-        auto p2 = shuffled_agents.begin();
-        while (p2 != p)
+        PathTable windowed_path_table;
+        auto shuffled_agents = neighbor.agents;
+        std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
+        if (screen >= 2)
         {
-            int a = *p2;
-            path_table.deletePath(agents[a].id, agents[a].path);
-            ++p2;
+            for (auto id : shuffled_agents)
+                cout << id << "(" << agents[id].path_planner->my_heuristic[agents[id].path_planner->start_location] << "->" << agents[id].path.size() - 1 << "), ";
+            cout << endl;
         }
-        if (!neighbor.old_paths.empty())
+        int remaining_agents = (int)shuffled_agents.size();
+        auto p = shuffled_agents.begin();
+        neighbor.sum_of_costs = 0;
+        runtime = ((fsec)(Time::now() - start_time)).count();
+        double T = time_limit - runtime; // time limit
+        if (!iteration_stats.empty())    // replan
+            T = min(T, replan_time_limit);
+        auto time = Time::now();
+        ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &windowed_path_table);
+        while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
         {
-            p2 = neighbor.agents.begin();
-            for (int i = 0; i < (int)neighbor.agents.size(); i++)
+            int id = *p;
+            if (screen >= 3)
+                cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+                     << "Agent " << agents[id].id << endl;
+            agents[id].path = agents[id].path_planner->findPath(constraint_table);
+
+            if (agents[id].path.empty())
+                break; // Check if agents plan is unsuccessful
+
+            remaining_agents--;
+
+            std::vector<PathEntry>::iterator first = agents[id].path.begin();
+            windowed_path_table.insertPath(agents[id].id, std::vector<PathEntry>(first, first + window_size));
+            ++p;
+        }
+
+        // All Agents have a path to there goal
+        if (remaining_agents == 0)
+        {
+            is_planning_complete = true; // Assume all agents are at their goal
+
+            for (int id = 0; id < agents.size(); id++)
             {
-                int a = *p2;
-                agents[a].path = neighbor.old_paths[i];
-                path_table.insertPath(agents[a].id, agents[a].path);
-                ++p2;
+                // Each Agent will commit to window_size ahead in their plan
+                int commit_time = min(window_size, (int)agents[id].path.size());                    // Handle the case where window_size > remaining path
+                agents[id].path_planner->start_location = agents[id].path.at(commit_time).location; // Move agent ahead and replan
+
+                for (int time_step = 0; time_step < agents[id].path.size(); time_step++)
+                {
+                    windowed_paths[id].push_back(agents[id].path.at(commit_time));
+                }
+
+                if (agents[id].path_planner->start_location != agents[id].path_planner->goal_location)
+                    is_planning_complete = false; // At least one agent is not at its goal.
             }
-            neighbor.sum_of_costs = neighbor.old_sum_of_costs;
         }
-        return false;
+        ++planning_phases;
     }
+    for (int id = 0; id < agents.size(); id++)
+    {
+        for (int time_step = agents[id].path.size(); time_step >= 0; time_step--)
+        {
+            if (agents[id].path[time_step].location != agents[id].path_planner->goal_location)
+            {
+                std::vector<PathEntry>::iterator first = windowed_paths[id].begin();
+                path_table.insertPath(agents[id].id, std::vector<PathEntry>(first, first + time_step + 1)); // add total path
+            }
+        }
+    }
+
+    return true;
 }
 bool LNS::runPPS()
 {

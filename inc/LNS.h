@@ -68,7 +68,7 @@ private:
     bool runEECBS();
     bool runCBS();
     bool runPP();
-    bool runWPP(int window_size);
+    bool runWinPP(int window_size);
     bool runPIBT();
     bool runPPS();
     bool runWinPIBT();
