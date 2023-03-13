@@ -413,14 +413,14 @@ bool LNS::runPP()
 }
 bool LNS::runWinPP(int window_size)
 {
-    std::vector<Path> windowed_paths;
+    std::vector<Path> windowed_paths((int)agents.size());
 
     bool is_planning_complete = false;
     int planning_phases = 0;
 
     while (!is_planning_complete)
     {
-        PathTable windowed_path_table;
+        PathTable windowed_path_table = PathTable(instance.map_size);
         auto shuffled_agents = neighbor.agents;
         std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
         if (screen >= 2)
@@ -441,7 +441,7 @@ bool LNS::runWinPP(int window_size)
         while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
         {
             int id = *p;
-            if (true)
+            if (screen >= 3)
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                      << "Agent " << agents[id].id << endl;
             agents[id].path = agents[id].path_planner->findPath(constraint_table);
@@ -451,10 +451,11 @@ bool LNS::runWinPP(int window_size)
 
             remaining_agents--;
 
-            std::vector<PathEntry>::iterator first = agents[id].path.begin();
+            Path::iterator first = agents[id].path.begin();
             int remaining_window_size = min(window_size, (int)agents[id].path.size() - 1); // Handle the case where window_size > remaining path
-            cout << (int)agents[id].path.size() << " " << remaining_window_size << endl;
-            windowed_path_table.insertPath(agents[id].id, Path(first, first + remaining_window_size));
+                                                                                           //            cout << (int)agents[id].path.size() << " " << remaining_window_size << endl;
+            Path windowed_path = Path(first, first + remaining_window_size);
+            windowed_path_table.insertPath(agents[id].id, windowed_path);
             ++p;
         }
 
@@ -463,15 +464,15 @@ bool LNS::runWinPP(int window_size)
         {
             is_planning_complete = true; // Assume all agents are at their goal
 
-            for (int id = 0; id < agents.size(); id++)
+            for (int id = 0; id < (int)agents.size(); id++)
             {
                 // Each Agent will commit to window_size ahead in their plan
-                int commit_time = min(window_size, (int)agents[id].path.size() - 1);                // Handle the case where window_size > remaining path
-                agents[id].path_planner->start_location = agents[id].path.at(commit_time).location; // Move agent ahead and replan
+                int commit_time = min(window_size, (int)agents[id].path.size());                        // Handle the case where window_size > remaining path
+                agents[id].path_planner->start_location = agents[id].path.at(commit_time - 1).location; // Move agent ahead and replan
 
-                for (int time_step = 0; time_step < agents[id].path.size(); time_step++)
+                for (int time_step = 0; time_step < commit_time; time_step++)
                 {
-                    windowed_paths[id].push_back(agents[id].path.at(commit_time));
+                    windowed_paths[id].push_back(agents[id].path.at(time_step));
                 }
 
                 if (agents[id].path_planner->start_location != agents[id].path_planner->goal_location)
@@ -480,17 +481,23 @@ bool LNS::runWinPP(int window_size)
         }
         cout << planning_phases++ << endl;
     }
+
+    // All Agents are at their goal
     for (int id = 0; id < agents.size(); id++)
     {
+        // Iterate backwards through the list to find where the agents reach the goal and stay their
         for (int time_step = agents[id].path.size(); time_step >= 0; time_step--)
         {
             if (agents[id].path[time_step].location != agents[id].path_planner->goal_location)
             {
-                std::vector<PathEntry>::iterator first = windowed_paths[id].begin();
-                path_table.insertPath(agents[id].id, std::vector<PathEntry>(first, first + time_step + 1)); // add total path
+                Path::iterator first = windowed_paths[id].begin();
+                path_table.insertPath(agents[id].id, Path(first, first + time_step + 1)); // add total path
             }
         }
+        agents[id].path_planner->start_location = windowed_paths[id].at(0).location;
+        agents[id].path = windowed_paths[id];
     }
+    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
 
     return true;
 }
