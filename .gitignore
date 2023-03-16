@@ -19,3 +19,6 @@ CTestTestfile.cmake
 _deps
 /scen-even
 orz*
+.vscode
+build
+CMakeLists.txt
