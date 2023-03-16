@@ -14,15 +14,26 @@ int main(int argc, char **argv)
     desc.add_options()("help", "produce help message")
 
         // params for the input instance and experiment settings
-        ("map,m", po::value<string>()->required(), "input file for map")("agents,a", po::value<string>()->required(), "input file for agents")("agentNum,k", po::value<int>()->default_value(0), "number of agents")("output,o", po::value<string>(), "output file name (no extension)")("outputPaths", po::value<string>(), "output file for paths")("cutoffTime,t", po::value<double>()->default_value(7200), "cutoff time (seconds)")("screen,s", po::value<int>()->default_value(0),
+        ("map,m", po::value<string>()->required(), "input file for map")
+        ("agents,a", po::value<string>()->required(), "input file for agents")
+        ("agentNum,k", po::value<int>()->default_value(0), "number of agents")
+        ("output,o", po::value<string>(), "output file name (no extension)")
+        ("outputPaths", po::value<string>(), "output file for paths")
+        ("cutoffTime,t", po::value<double>()->default_value(7200), "cutoff time (seconds)")
+        ("screen,s", po::value<int>()->default_value(0),
                                                                                                                                                                                                                                                                                                                                                                                                                                          "screen option (0: none; 1: LNS results; 2:LNS detailed results; 3: MAPF detailed results)")("stats", po::value<string>(), "output stats file")
 
         // solver
-        ("solver", po::value<string>()->default_value("LNS"), "solver (LNS, A-BCBS, A-EECBS)")("sipp", po::value<bool>()->default_value(true), "Use SIPP as the single-agent solver")("seed", po::value<int>()->default_value(0), "Random seed")
+        ("solver", po::value<string>()->default_value("LNS"), "solver (LNS, A-BCBS, A-EECBS)")
+        ("sipp", po::value<bool>()->default_value(true), "Use SIPP as the single-agent solver")
+        ("seed", po::value<int>()->default_value(0), "Random seed")
 
         // params for LNS
         ("initLNS", po::value<bool>()->default_value(true),
-         "use LNS to find initial solutions if the initial sovler fails")("neighborSize", po::value<int>()->default_value(8), "Size of the neighborhood")("maxIterations", po::value<int>()->default_value(0), "maximum number of iterations")("initAlgo", po::value<string>()->default_value("winPP"),
+         "use LNS to find initial solutions if the initial sovler fails")
+         ("neighborSize", po::value<int>()->default_value(8), "Size of the neighborhood")
+         ("maxIterations", po::value<int>()->default_value(0), "maximum number of iterations")
+         ("initAlgo", po::value<string>()->default_value("winPP"),
                                                                                                                                                                                                                                                "MAPF algorithm for finding the initial solution (EECBS, PP, PPS, winPP, CBS, PIBT, winPIBT)")("replanAlgo", po::value<string>()->default_value("PP"),
                                                                                                                                                                                                                                                                                                                                               "MAPF algorithm for replanning (EECBS, CBS, PP)")("destoryStrategy", po::value<string>()->default_value("Adaptive"),
                                                                                                                                                                                                                                                                                                                                                                                                 "Heuristics for finding subgroups (Random, RandomWalk, Intersection, Adaptive)")("pibtWindow", po::value<int>()->default_value(5),
