@@ -207,7 +207,7 @@ bool LNS::getInitialSolution()
     else if (init_algo_name == "PPS")
         succ = runPPS();
     else if (init_algo_name == "winPP")
-        succ = runWinPP(10, 10);
+        succ = runWinPP(50, 25);
     else if (init_algo_name == "winPIBT")
         succ = runWinPIBT();
     else if (init_algo_name == "CBS")
@@ -413,6 +413,9 @@ bool LNS::runPP()
 }
 bool LNS::runWinPP(int planning_window_length, int commit_length)
 {
+
+    assert(planning_window_length >= commit_length);
+
     std::vector<Path> windowed_paths((int)agents.size());
 
     bool is_planning_complete = false;
@@ -451,20 +454,21 @@ bool LNS::runWinPP(int planning_window_length, int commit_length)
 
             if (agents[id].path.empty())
             {
-                cout << "Agent " << agents[id].id << " Failed" << endl <<
-                "Start Location: " << instance.getRowCoordinate(agents[id].path_planner->start_location) << "," << instance.getColCoordinate(agents[id].path_planner->start_location)  << endl <<
-                "Goal Location: " << instance.getRowCoordinate(agents[id].path_planner->goal_location) << "," << instance.getColCoordinate(agents[id].path_planner->goal_location)  << endl; 
+                cout << "Agent " << agents[id].id << " Failed" << endl
+                     << "Start Location: " << instance.getRowCoordinate(agents[id].path_planner->start_location) << "," << instance.getColCoordinate(agents[id].path_planner->start_location) << endl
+                     << "Goal Location: " << instance.getRowCoordinate(agents[id].path_planner->goal_location) << "," << instance.getColCoordinate(agents[id].path_planner->goal_location) << endl;
                 break; // Check if agents plan is unsuccessful
             }
 
             remaining_agents--;
 
-            Path::iterator first = agents[id].path.begin();
             int remaining_window_length = min(planning_window_length, (int)agents[id].path.size()); // Handle the case where window_size > remaining path
-                                                                                            //            cout << (int)agents[id].path.size() << " " << remaining_window_size << endl;
+
+            Path::iterator first = agents[id].path.begin(); //            cout << (int)agents[id].path.size() << " " << remaining_window_size << endl;
             Path windowed_path = Path(first, first + remaining_window_length);
-            while ((int)windowed_path.size() <= planning_window_length){
-                windowed_path.push_back(windowed_path.at(remaining_window_length-1));
+            while ((int)windowed_path.size() <= planning_window_length)
+            {
+                windowed_path.push_back(windowed_path.at(remaining_window_length - 1));
             }
 
             windowed_path_table.insertPath(agents[id].id, windowed_path);
@@ -475,12 +479,13 @@ bool LNS::runWinPP(int planning_window_length, int commit_length)
         if (remaining_agents == 0)
         {
             is_planning_complete = true; // Assume all agents are at their goal
+            int num_agents_at_goal = (int)agents.size();
 
             for (int id = 0; id < (int)agents.size(); id++)
             {
                 // Each Agent will commit to window_size ahead in their plan
-                int remaining_commit_length = min(commit_length, (int)agents[id].path.size());                        // Handle the case where window_size > remaining path
-                                                                                                          //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
+                int remaining_commit_length = min(commit_length, (int)agents[id].path.size());                      // Handle the case where window_size > remaining path
+                                                                                                                    //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
                 agents[id].path_planner->start_location = agents[id].path.at(remaining_commit_length - 1).location; // Move agent ahead and replan
 
                 if (windowed_paths[id].empty())
@@ -495,10 +500,15 @@ bool LNS::runWinPP(int planning_window_length, int commit_length)
                 }
 
                 if (agents[id].path_planner->start_location != agents[id].path_planner->goal_location)
+                {
                     is_planning_complete = false; // At least one agent is not at its goal.
+                    num_agents_at_goal--;
+                }
             }
 
-            cout << "Planning Window: " << planning_phases++ << " Complete" << endl;
+            cout << "Planning Window: " << planning_phases++ << " Complete" << endl
+                 << "Remaining time:  " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+                 << "Agents at Goal: " << num_agents_at_goal << endl;
         }
     }
 

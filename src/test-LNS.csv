@@ -1,3 +1,8 @@
 runtime,solution cost,initial solution cost,lower bound,sum of distance,iterations,group size,runtime of initial solution,restart times,area under curve,LL expanded nodes,LL generated,LL reopened,LL runs,preprocessing runtime,solver name,instance name
 169.266,17530,17530,17526,17526,1,0,169.266,0,522.936,2726195,6272920,0,3390,1.43715,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
 141.802,17928,17928,17526,17526,1,0,141.802,0,63595.4,2297497,5846432,0,3390,1.45255,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
+16.7053,17928,17928,17526,17526,1,0,16.7053,0,395284,2297497,5846429,0,3390,0.201812,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
+16.3441,17928,17928,17526,17526,1,0,16.3441,0,395430,2297497,5846429,0,3390,0.192746,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
+643.665,1833337,1833337,1551358,1551358,1,0,643.665,0,1.00479e+08,81278554,206872185,24350,140683,20.4801,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
+652.573,1833337,1833337,1551358,1551358,1,0,652.573,0,9.79671e+07,81278554,206872185,24350,140683,21.2911,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
+118.006,1776009,1776009,1551358,1551358,1,0,118.006,0,1.98141e+08,13650726,36554193,5257700,1000,19.2216,LNS(PP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
