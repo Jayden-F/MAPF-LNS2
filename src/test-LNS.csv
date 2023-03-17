@@ -1,0 +1,3 @@
+runtime,solution cost,initial solution cost,lower bound,sum of distance,iterations,group size,runtime of initial solution,restart times,area under curve,LL expanded nodes,LL generated,LL reopened,LL runs,preprocessing runtime,solver name,instance name
+169.266,17530,17530,17526,17526,1,0,169.266,0,522.936,2726195,6272920,0,3390,1.43715,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen
+141.802,17928,17928,17526,17526,1,0,141.802,0,63595.4,2297497,5846432,0,3390,1.45255,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scen-even/orz900d-even-1.scen

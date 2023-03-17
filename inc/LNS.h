@@ -68,7 +68,7 @@ private:
     bool runEECBS();
     bool runCBS();
     bool runPP();
-    bool runWinPP(int window_size);
+    bool runWinPP(int planning_window_length, int commit_length);
     bool runPIBT();
     bool runPPS();
     bool runWinPIBT();

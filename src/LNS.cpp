@@ -207,7 +207,7 @@ bool LNS::getInitialSolution()
     else if (init_algo_name == "PPS")
         succ = runPPS();
     else if (init_algo_name == "winPP")
-        succ = runWinPP(10);
+        succ = runWinPP(10, 10);
     else if (init_algo_name == "winPIBT")
         succ = runWinPIBT();
     else if (init_algo_name == "CBS")
@@ -411,17 +411,18 @@ bool LNS::runPP()
         return false;
     }
 }
-bool LNS::runWinPP(int window_size)
+bool LNS::runWinPP(int planning_window_length, int commit_length)
 {
     std::vector<Path> windowed_paths((int)agents.size());
 
-
     bool is_planning_complete = false;
     int planning_phases = 0;
+    PathTable windowed_path_table = PathTable(instance.map_size);
 
     while (!is_planning_complete)
     {
-        PathTable windowed_path_table = PathTable(instance.map_size);
+
+        windowed_path_table.reset();
         auto shuffled_agents = neighbor.agents;
         std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
         if (screen >= 2)
@@ -443,20 +444,29 @@ bool LNS::runWinPP(int window_size)
         while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
         {
             int id = *p;
-            if (screen >= 3 || true)
+            if (screen >= 3)
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                      << "Agent " << agents[id].id << endl;
             agents[id].path = agents[id].path_planner->findPath(constraint_table);
 
             if (agents[id].path.empty())
+            {
+                cout << "Agent " << agents[id].id << " Failed" << endl <<
+                "Start Location: " << instance.getRowCoordinate(agents[id].path_planner->start_location) << "," << instance.getColCoordinate(agents[id].path_planner->start_location)  << endl <<
+                "Goal Location: " << instance.getRowCoordinate(agents[id].path_planner->goal_location) << "," << instance.getColCoordinate(agents[id].path_planner->goal_location)  << endl; 
                 break; // Check if agents plan is unsuccessful
+            }
 
             remaining_agents--;
 
             Path::iterator first = agents[id].path.begin();
-            int remaining_window_size = min(window_size, (int)agents[id].path.size()); // Handle the case where window_size > remaining path
-                                                                                           //            cout << (int)agents[id].path.size() << " " << remaining_window_size << endl;
-            Path windowed_path = Path(first, first + remaining_window_size);
+            int remaining_window_length = min(planning_window_length, (int)agents[id].path.size()); // Handle the case where window_size > remaining path
+                                                                                            //            cout << (int)agents[id].path.size() << " " << remaining_window_size << endl;
+            Path windowed_path = Path(first, first + remaining_window_length);
+            while ((int)windowed_path.size() <= planning_window_length){
+                windowed_path.push_back(windowed_path.at(remaining_window_length-1));
+            }
+
             windowed_path_table.insertPath(agents[id].id, windowed_path);
             ++p;
         }
@@ -469,26 +479,27 @@ bool LNS::runWinPP(int window_size)
             for (int id = 0; id < (int)agents.size(); id++)
             {
                 // Each Agent will commit to window_size ahead in their plan
-                int commit_length = min(window_size, (int)agents[id].path.size()); // Handle the case where window_size > remaining path
-//                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
-                agents[id].path_planner->start_location = agents[id].path.at(commit_length - 1).location; // Move agent ahead and replan
+                int remaining_commit_length = min(commit_length, (int)agents[id].path.size());                        // Handle the case where window_size > remaining path
+                                                                                                          //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
+                agents[id].path_planner->start_location = agents[id].path.at(remaining_commit_length - 1).location; // Move agent ahead and replan
 
                 if (windowed_paths[id].empty())
                     windowed_paths[id].push_back(agents[id].path.at(0));
 
-                for (int time_step = 1; time_step < window_size; time_step++)
+                for (int time_step = 1; time_step < commit_length; time_step++)
                 {
-                    if (time_step < commit_length)
-                    windowed_paths[id].push_back(agents[id].path.at(time_step));
+                    if (time_step < remaining_commit_length)
+                        windowed_paths[id].push_back(agents[id].path.at(time_step));
                     else
-                        windowed_paths[id].push_back(agents[id].path.at(commit_length-1));
+                        windowed_paths[id].push_back(agents[id].path.at(remaining_commit_length - 1));
                 }
 
                 if (agents[id].path_planner->start_location != agents[id].path_planner->goal_location)
                     is_planning_complete = false; // At least one agent is not at its goal.
             }
+
+            cout << "Planning Window: " << planning_phases++ << " Complete" << endl;
         }
-        cout << "Planning Window: " << planning_phases++ << " Complete" << endl;
     }
 
     // All Agents are at their goal
@@ -507,12 +518,12 @@ bool LNS::runWinPP(int window_size)
         agents[id].path_planner->start_location = windowed_paths[id].at(0).location;
         agents[id].path = windowed_paths[id];
         path_table.insertPath(agents[id].id, windowed_paths[id]); // add total path
-
     }
 
     ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
 
-    for (int id = 0; id < agents.size(); id++) {
+    for (int id = 0; id < agents.size(); id++)
+    {
         neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
     }
     return true;
