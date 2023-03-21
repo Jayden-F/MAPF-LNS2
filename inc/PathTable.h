@@ -17,7 +17,10 @@ public:
         goals.assign(map_size, MAX_COST);
         makespan = 0;
     }
-    void insertPath(int agent_id, const Path &path, int length = 1);
+    void insertPath(int agent_id, const Path &path);
+    void insertPath(int agent_id, const Path &path, int length);
+
+
     void deletePath(int agent_id, const Path &path);
     bool constrained(int from, int to, int to_time) const;
 

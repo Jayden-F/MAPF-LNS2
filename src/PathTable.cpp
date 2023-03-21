@@ -1,14 +1,28 @@
 #include "PathTable.h"
 
+void PathTable::insertPath(int agent_id, const Path &path)
+{
+    if (path.empty())
+        return;
+
+    for (int t = 0; t < (int)path.size(); t++)
+    {
+        if (table[path[t].location].size() <= t)
+            table[path[t].location].resize(t + 1, NO_AGENT);
+        // assert(table[path[t].location][t] == NO_AGENT);
+        table[path[t].location][t] = agent_id;
+    }
+    assert(goals[path.back().location] == MAX_TIMESTEP);
+    goals[path.back().location] = (int) path.size() - 1;
+    makespan = max(makespan, (int) path.size() - 1);
+}
+
 void PathTable::insertPath(int agent_id, const Path &path, int length)
 {
     if (path.empty())
         return;
 
     int remaining_length = (int)path.size();
-
-    if (length == 0)
-        length = (int)path.size();
 
     for (int t = 0; t < length; t++)
     {
