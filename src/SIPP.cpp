@@ -26,7 +26,7 @@ void SIPP::updatePath(const LLNode* goal, vector<PathEntry> &path)
 
 // find path by A*
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SIPP::findPath(const ConstraintTable& constraint_table)
+Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
 {
     reset();
     //Path path = findNoCollisionPath(constraint_table);
@@ -53,7 +53,7 @@ Path SIPP::findPath(const ConstraintTable& constraint_table)
         num_expanded++;
         assert(curr->location >= 0);
         // check if the popped node is a goal
-        if (curr->is_goal)
+        if (curr->is_goal or curr->g_val >= depth_limit)
         {
             updatePath(curr, path);
             break;

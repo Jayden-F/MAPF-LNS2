@@ -29,20 +29,17 @@ int main(int argc, char **argv)
         ("seed", po::value<int>()->default_value(0), "Random seed")
 
         // params for LNS
-        ("initLNS", po::value<bool>()->default_value(true),
-         "use LNS to find initial solutions if the initial sovler fails")
-         ("neighborSize", po::value<int>()->default_value(8), "Size of the neighborhood")
-         ("maxIterations", po::value<int>()->default_value(0), "maximum number of iterations")
-         ("initAlgo", po::value<string>()->default_value("winPP"),
-                                                                                                                                                                                                                                               "MAPF algorithm for finding the initial solution (EECBS, PP, PPS, winPP, CBS, PIBT, winPIBT)")("replanAlgo", po::value<string>()->default_value("PP"),
-                                                                                                                                                                                                                                                                                                                                              "MAPF algorithm for replanning (EECBS, CBS, PP)")("destoryStrategy", po::value<string>()->default_value("Adaptive"),
-                                                                                                                                                                                                                                                                                                                                                                                                "Heuristics for finding subgroups (Random, RandomWalk, Intersection, Adaptive)")("pibtWindow", po::value<int>()->default_value(5),
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 "window size for winPIBT")("winPibtSoftmode", po::value<bool>()->default_value(true),
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "winPIBT soft mode")
+        ("initLNS", po::value<bool>()->default_value(true), "use LNS to find initial solutions if the initial sovler fails")
+        ("neighborSize", po::value<int>()->default_value(8), "Size of the neighborhood")
+        ("maxIterations", po::value<int>()->default_value(0), "maximum number of iterations")
+        ("initAlgo", po::value<string>()->default_value("winPP"), "MAPF algorithm for finding the initial solution (EECBS, PP, PPS, winPP, CBS, PIBT, winPIBT)")
+        ("replanAlgo", po::value<string>()->default_value("PP"), "MAPF algorithm for replanning (EECBS, CBS, PP)")
+        ("destoryStrategy", po::value<string>()->default_value("Adaptive"), "Heuristics for finding subgroups (Random, RandomWalk, Intersection, Adaptive)")
+        ("pibtWindow", po::value<int>()->default_value(5), "window size for winPIBT")
+        ("winPibtSoftmode", po::value<bool>()->default_value(true), "winPIBT soft mode")
 
         // params for initLNS
-        ("initDestoryStrategy", po::value<string>()->default_value("Adaptive"),
-         "Heuristics for finding subgroups (Target, Collision, Random, Adaptive)");
+        ("initDestoryStrategy", po::value<string>()->default_value("Adaptive"), "Heuristics for finding subgroups (Target, Collision, Random, Adaptive)");
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
 
