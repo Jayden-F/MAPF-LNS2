@@ -37,6 +37,8 @@ int main(int argc, char **argv)
         ("destoryStrategy", po::value<string>()->default_value("Adaptive"), "Heuristics for finding subgroups (Random, RandomWalk, Intersection, Adaptive)")
         ("pibtWindow", po::value<int>()->default_value(5), "window size for winPIBT")
         ("winPibtSoftmode", po::value<bool>()->default_value(true), "winPIBT soft mode")
+        ("replanningPeriod", po::value<int>()->default_value(50), "replanning period")
+        ("timeHorizon", po::value<int>()->default_value(100), "planning time horizon")
 
         // params for initLNS
         ("initDestoryStrategy", po::value<string>()->default_value("Adaptive"), "Heuristics for finding subgroups (Target, Collision, Random, Adaptive)");
@@ -75,6 +77,9 @@ int main(int argc, char **argv)
                 vm["initDestoryStrategy"].as<string>(),
                 vm["sipp"].as<bool>(),
                 screen, pipp_option);
+
+        lns.replanning_period = vm["replanningPeriod"].as<int>();
+        lns.time_horizon = vm["timeHorizon"].as<int>();
         bool succ = lns.run();
         if (succ)
         {
