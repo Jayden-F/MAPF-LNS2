@@ -159,8 +159,7 @@ bool LNS::run()
         if (ALNS) // update destroy heuristics
         {
             if (neighbor.old_sum_of_costs > neighbor.sum_of_costs)
-                destroy_weights[selected_neighbor] =
-                    reaction_factor * (neighbor.old_sum_of_costs - neighbor.sum_of_costs) / neighbor.agents.size() + (1 - reaction_factor) * destroy_weights[selected_neighbor];
+                destroy_weights[selected_neighbor] = reaction_factor * (neighbor.old_sum_of_costs - neighbor.sum_of_costs) / neighbor.agents.size() + (1 - reaction_factor) * destroy_weights[selected_neighbor];
             else
                 destroy_weights[selected_neighbor] =
                     (1 - decay_factor) * destroy_weights[selected_neighbor];
@@ -414,13 +413,18 @@ bool LNS::runPP()
 bool LNS::runWinPP(int time_horizon, int replanning_period)
 {
 
-    cout << "Time Horizon: " << time_horizon << " Replanning Period: " << replanning_period << endl;
+    // cout << "Time Horizon: " << time_horizon << " Replanning Period: " << replanning_period << endl;
 
     assert(replanning_period <= time_horizon); // you must replan before the end of your time horizon
 
     int planning_phases = 0;
     int num_agents_at_goal = 0;
     int max_agents = (int)agents.size();
+
+    float findPath_time = 0;
+    float addPath_time = 0;
+    float accumPath_time = 0;
+    high_resolution_clock::time_point start;
 
     PathTable path_table = PathTable(instance.map_size);
     ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
@@ -461,19 +465,28 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
             if (screen >= 3)
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                      << "Agent " << agents[id].id << endl;
-            agents[id].path = agents[id].path_planner->findPath(constraint_table, time_horizon);
 
+            start = Time::now();
+            agents[id].path = agents[id].path_planner->findPath(constraint_table, time_horizon);
+            findPath_time += ((fsec)(Time::now() - start)).count();
+
+            // cout << "Expanded Nodes" << agents[id].path_planner->getNumExpanded() << endl;
+
+            
             if (agents[id].path.empty())
             {
-                cout << "Agent " << agents[id].id << " Failed" << endl
-                     << "Start Location: " << instance.getRowCoordinate(agents[id].path_planner->start_location) << "," << instance.getColCoordinate(agents[id].path_planner->start_location) << endl
-                     << "Goal Location: " << instance.getRowCoordinate(agents[id].path_planner->goal_location) << "," << instance.getColCoordinate(agents[id].path_planner->goal_location) << endl;
+                // cout << "Agent " << agents[id].id << " Failed" << endl
+                //      << "Start Location: " << instance.getRowCoordinate(agents[id].path_planner->start_location) << "," << instance.getColCoordinate(agents[id].path_planner->start_location) << endl
+                //      << "Goal Location: " << instance.getRowCoordinate(agents[id].path_planner->goal_location) << "," << instance.getColCoordinate(agents[id].path_planner->goal_location) << endl;
                 break; // Check if agents plan is unsuccessful
             }
 
             remaining_agents--;
 
+            start = Time::now();
             path_table.insertPath(agents[id].id, agents[id].path, time_horizon);
+            addPath_time += ((fsec)(Time::now() - start)).count();
+
             ++p;
         }
 
@@ -482,6 +495,8 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
         {
             num_agents_at_goal = 0; // No agents are currently at thier goal location
 
+
+            start = Time::now();
             for (int id = 0; id < max_agents; id++)
             {
                 windowed_paths[id].reserve((int)windowed_paths[id].size() + replanning_period);
@@ -506,10 +521,15 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
                         windowed_paths[id].push_back(agents[id].path.at(remaining_path_length - 1));
                 }
             }
+            accumPath_time += ((fsec)(Time::now() - start)).count();
 
-            cout << "Planning Window: " << planning_phases++ << " Complete" << endl
-                 << "Remaining time:  " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
-                 << "Agents at Goal: " << num_agents_at_goal << endl;
+
+            // cout << "Planning Window: " << planning_phases++ << " Complete" << endl
+            //      << "Remaining time:  " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+            //      << "Agents at Goal: " << num_agents_at_goal << endl
+            //      << "Find Path: " << findPath_time << endl
+            //      << "Add Path: " << addPath_time << endl
+            //      << "Accum Path " << accumPath_time << endl;
         }
     }
 
@@ -973,7 +993,7 @@ void LNS::writeResultToFile(const string &file_name) const
                  << "group size,"
                  << "runtime of initial solution,restart times,area under curve,"
                  << "LL expanded nodes,LL generated,LL reopened,LL runs,"
-                 << "preprocessing runtime,solver name,instance name" << endl;
+                 << "preprocessing runtime,solver name,instance name,time horizon,replanning_period" << endl;
         addHeads.close();
     }
     uint64_t num_LL_expanded = 0, num_LL_generated = 0, num_LL_reopened = 0, num_LL_runs = 0;
@@ -1000,7 +1020,7 @@ void LNS::writeResultToFile(const string &file_name) const
         auc += (prev->sum_of_costs - sum_of_distances) * (time_limit - prev->runtime);
     }
     ofstream stats(name, std::ios::app);
-    stats << runtime << "," << sum_of_costs << "," << initial_sum_of_costs << "," << max(sum_of_distances, sum_of_costs_lowerbound) << "," << sum_of_distances << "," << iteration_stats.size() << "," << average_group_size << "," << initial_solution_runtime << "," << restart_times << "," << auc << "," << num_LL_expanded << "," << num_LL_generated << "," << num_LL_reopened << "," << num_LL_runs << "," << preprocessing_time << "," << getSolverName() << "," << instance.getInstanceName() << endl;
+    stats << runtime << "," << sum_of_costs << "," << initial_sum_of_costs << "," << max(sum_of_distances, sum_of_costs_lowerbound) << "," << sum_of_distances << "," << iteration_stats.size() << "," << average_group_size << "," << initial_solution_runtime << "," << restart_times << "," << auc << "," << num_LL_expanded << "," << num_LL_generated << "," << num_LL_reopened << "," << num_LL_runs << "," << preprocessing_time << "," << getSolverName() << "," << instance.getInstanceName() << "," << time_horizon << "," << replanning_period << endl;
     stats.close();
 }
 
