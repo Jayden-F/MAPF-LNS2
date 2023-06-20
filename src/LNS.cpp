@@ -422,6 +422,7 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
     int max_agents = (int)agents.size();
 
     float findPath_time = 0;
+    float initPath_time = 0;
     float addPath_time = 0;
     float accumPath_time = 0;
     high_resolution_clock::time_point start;
@@ -429,6 +430,7 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
     PathTable path_table = PathTable(instance.map_size);
     ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
     Path windowed_path = Path();
+    SIT sit = SIT(constraint_table.map_size);
     std::vector<Path> windowed_paths(max_agents);
 
     for (int id = 0; id < max_agents; id++)
@@ -458,6 +460,7 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
         if (!iteration_stats.empty())    // replan
             T = min(T, replan_time_limit);
         auto time = Time::now();
+        
 
         while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
         {
@@ -467,8 +470,10 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
                      << "Agent " << agents[id].id << endl;
 
             start = Time::now();
-            agents[id].path = agents[id].path_planner->findPath(constraint_table, time_horizon);
+            agents[id].path = agents[id].path_planner->findPath(constraint_table, sit, time_horizon);
+            
             findPath_time += ((fsec)(Time::now() - start)).count();
+            initPath_time += agents[id].path_planner->initialise_timer;
 
             // cout << "Expanded Nodes" << agents[id].path_planner->getNumExpanded() << endl;
 
@@ -524,12 +529,14 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
             accumPath_time += ((fsec)(Time::now() - start)).count();
 
 
-            // cout << "Planning Window: " << planning_phases++ << " Complete" << endl
-            //      << "Remaining time:  " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
-            //      << "Agents at Goal: " << num_agents_at_goal << endl
-            //      << "Find Path: " << findPath_time << endl
-            //      << "Add Path: " << addPath_time << endl
-            //      << "Accum Path " << accumPath_time << endl;
+            cout << "Planning Window: " << planning_phases++ << " Complete" << endl
+                 << "Remaining time:  " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+                 << "Agents at Goal: " << num_agents_at_goal << endl
+                 << "Find Path: " << findPath_time << endl
+                 << "Add Path: " << addPath_time << endl
+                 << "Accum Path " << accumPath_time << endl
+                 << "Init Path " << initPath_time << endl;
+
         }
     }
 

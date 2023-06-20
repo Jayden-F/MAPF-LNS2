@@ -63,7 +63,6 @@ public:
 class SIPP: public SingleAgentSolver
 {
 public:
-
     // find path by SIPP
 	// Returns a shortest path that satisfies the constraints of the give node  while
 	// minimizing the number of internal conflicts (that is conflicts with known_paths for other agents found so far).
@@ -73,8 +72,8 @@ public:
 	Path findOptimalPath(const HLNode& node, const ConstraintTable& initial_constraints,
 		const vector<Path*>& paths, int agent, int lowerbound);
 	pair<Path, int> findSuboptimalPath(const HLNode& node, const ConstraintTable& initial_constraints,
-		const vector<Path*>& paths, int agent, int lowerbound, double w);  // return the path and the lowerbound
-    Path findPath(const ConstraintTable& constraint_table, int depth_limit = INFINITY); // return A path that minimizes collisions, breaking ties by cost
+		const vector<Path*>& paths, int agent, int lowerbound, double w,  SIT& sit);  // return the path and the lowerbound
+    Path findPath(const ConstraintTable& constraint_table, SIT& sit, int depth_limit = INFINITY); // return A path that minimizes collisions, breaking ties by cost
     int getTravelTime(int start, int end, const ConstraintTable& constraint_table, int upper_bound);
 
 	string getName() const { return "SIPP"; }
