@@ -3,16 +3,14 @@
 #include "ConstraintTable.h"
 
 typedef tuple<int, int, bool> Interval; // [t_min, t_max), has collision
-typedef vector< list<Interval> > SIT;
 
 class ReservationTable
 {
 public:
     const ConstraintTable& constraint_table;
-    SIT& sit; // location -> [t_min, t_max), num_of_collisions
 
-    ReservationTable(const ConstraintTable& constraint_table, int goal_location, SIT& sit) :
-        constraint_table(constraint_table), goal_location(goal_location), sit(sit) {}
+    ReservationTable(const ConstraintTable& constraint_table, int goal_location) :
+        constraint_table(constraint_table), goal_location(goal_location), sit(constraint_table.map_size) {}
 
     list<tuple<int, int, int, bool, bool> > get_safe_intervals(int from, int to, int lower_bound, int upper_bound);
     Interval get_first_safe_interval(size_t location);
@@ -21,6 +19,8 @@ public:
 private:
     int goal_location;
 	// Safe Interval Table (SIT)
+	typedef vector< list<Interval> > SIT;
+    SIT sit; // location -> [t_min, t_max), num_of_collisions
     void insert2SIT(int location, int t_min, int t_max);
     void insertSoftConstraint2SIT(int location, int t_min, int t_max);
 	// void mergeIntervals(list<Interval >& intervals) const;

@@ -80,7 +80,6 @@ std::ostream& operator<<(std::ostream& os, const LLNode& node);
 class SingleAgentSolver
 {
 public:
-	float initialise_timer = 0;
     uint64_t accumulated_num_expanded = 0;
     uint64_t accumulated_num_generated = 0;
     uint64_t accumulated_num_reopened = 0;
@@ -105,7 +104,7 @@ public:
 		const vector<Path*>& paths, int agent, int lower_bound) = 0;
 	virtual pair<Path, int> findSuboptimalPath(const HLNode& node, const ConstraintTable& initial_constraints,
 		const vector<Path*>& paths, int agent, int lowerbound, double w) = 0;  // return the path and the lowerbound
-    virtual Path findPath(const ConstraintTable& constraint_table, int  = INFINITY) = 0;  // return the path
+    virtual Path findPath(const ConstraintTable& constraint_table, int planning_window_length = INFINITY) = 0;  // return the path
     void findMinimumSetofColldingTargets(vector<int>& goal_table,set<int>& A_target);
     virtual int getTravelTime(int start, int end, const ConstraintTable& constraint_table, int upper_bound) = 0;
 	virtual string getName() const = 0;

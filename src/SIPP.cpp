@@ -26,17 +26,13 @@ void SIPP::updatePath(const LLNode* goal, vector<PathEntry> &path)
 
 // find path by A*
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SIPP::findPath(const ConstraintTable& constraint_table, SIT& sit, int depth_limit)
+Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
 {
     reset();
     //Path path = findNoCollisionPath(constraint_table);
     //if (!path.empty())
     //    return path;
-    high_resolution_clock::time_point start_timer = Time::now();
-
-    ReservationTable reservation_table(constraint_table, goal_location, sit);
-    initialise_timer = ((fsec)(Time::now() - start_timer)).count();
-
+    ReservationTable reservation_table(constraint_table, goal_location);
     Path path;
     Interval interval = reservation_table.get_first_safe_interval(start_location);
     if (get<0>(interval) > 0)
@@ -48,8 +44,6 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, SIT& sit, int depth
     auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
                                 get<2>(interval), get<2>(interval));
     pushNodeToFocal(start);
-
-
 
     while (!focal_list.empty())
     {
@@ -149,7 +143,7 @@ Path SIPP::findOptimalPath(const HLNode& node, const ConstraintTable& initial_co
 // minimizing the number of internal conflicts (that is conflicts with known_paths for other agents found so far).
 // lowerbound is an underestimation of the length of the path in order to speed up the search.
 pair<Path, int> SIPP::findSuboptimalPath(const HLNode& node, const ConstraintTable& initial_constraints,
-	const vector<Path*>& paths, int agent, int lowerbound, double w, SIT& sit)
+	const vector<Path*>& paths, int agent, int lowerbound, double w)
 {
     reset();
 	this->w = w;
@@ -165,7 +159,7 @@ pair<Path, int> SIPP::findSuboptimalPath(const HLNode& node, const ConstraintTab
 	runtime_build_CAT = (double)(clock() - t) / CLOCKS_PER_SEC;
 
 	// build reservation table
-	ReservationTable reservation_table(constraint_table, goal_location, sit);
+	ReservationTable reservation_table(constraint_table, goal_location);
 
     Path path;
 	num_expanded = 0;
