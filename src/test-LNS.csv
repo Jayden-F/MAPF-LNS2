@@ -1,0 +1,7 @@
+runtime,solution cost,initial solution cost,lower bound,sum of distance,iterations,group size,runtime of initial solution,restart times,area under curve,LL expanded nodes,LL generated,LL reopened,LL runs,preprocessing runtime,solver name,instance name,time horizon,replanning_period
+0.576155,12402,12402,9762,9762,1,0,0.576155,0,2.63848e+06,83703,74855,21930,900,0.798431,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scenario/warehouse-10-20-10-2-1-even-1.scen,50,25
+0.572687,12402,12402,9762,9762,1,0,0.572687,0,2.63849e+06,83703,74855,21930,900,0.785228,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scenario/warehouse-10-20-10-2-1-even-1.scen,50,25
+2.71142,159770,159770,9762,9762,1,0,2.71142,0,1.49601e+08,278281,96689,188400,300,0.785217,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scenario/warehouse-10-20-10-2-1-even-1.scen,10000,10000
+21.3001,1509770,1509770,9762,9762,1,0,21.3001,0,1.46806e+09,278281,96689,188400,300,0.791691,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scenario/warehouse-10-20-10-2-1-even-1.scen,100000,100000
+22.2214,1509770,1509770,9762,9762,1,0,22.2214,0,1.46668e+09,278281,96689,188400,300,0.790472,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scenario/warehouse-10-20-10-2-1-even-1.scen,100000,100000
+5.42237,11057,11057,9762,9762,1,0,5.42237,0,1.28798e+06,92025,32336,69068,100,0.784756,LNS(winPP;PP),/home/ubuntu/MAPF-LNS2/scenario/warehouse-10-20-10-2-1-even-1.scen,100000,100000

@@ -9,6 +9,9 @@ class ReservationTable
 public:
     const ConstraintTable& constraint_table;
     int goal_location;
+    typedef vector< list<Interval> > SIT;
+    SIT sit; // location -> [t_min, t_max), num_of_collisions
+
 
     ReservationTable(const ConstraintTable& constraint_table, int goal_location) :
         constraint_table(constraint_table), goal_location(goal_location), sit(constraint_table.map_size) {}
@@ -19,8 +22,8 @@ public:
 
 private:
 	// Safe Interval Table (SIT)
-	typedef vector< list<Interval> > SIT;
-    SIT sit; // location -> [t_min, t_max), num_of_collisions
+
+
     void insert2SIT(int location, int t_min, int t_max);
     void insertSoftConstraint2SIT(int location, int t_min, int t_max);
 	// void mergeIntervals(list<Interval >& intervals) const;

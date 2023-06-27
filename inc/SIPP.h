@@ -74,8 +74,8 @@ public:
 		const vector<Path*>& paths, int agent, int lowerbound);
 	pair<Path, int> findSuboptimalPath(const HLNode& node, const ConstraintTable& initial_constraints,
 		const vector<Path*>& paths, int agent, int lowerbound, double w);  // return the path and the lowerbound
-    Path findPath(const ConstraintTable& constraint_table, int depth_limit = INFINITY); // return A path that minimizes collisions, breaking ties by cost
-	Path findPath(ReservationTable& reservation_table, int depth_limit = INFINITY); // return A path that minimizes collisions, breaking ties by cost
+    Path findPath(const ConstraintTable& constraint_table, int depth_limit = MAX_TIMESTEP, int t_min = 0); // return A path that minimizes collisions, breaking ties by cost
+	Path findPath(ReservationTable& reservation_table, int depth_limit = MAX_TIMESTEP, int t_min = 0); // return A path that minimizes collisions, breaking ties by cost
 
     int getTravelTime(int start, int end, const ConstraintTable& constraint_table, int upper_bound);
 
@@ -97,7 +97,7 @@ private:
     list<SIPPNode*> useless_nodes;
     // Path findNoCollisionPath(const ConstraintTable& constraint_table);
 
-    void updatePath(const LLNode* goal, std::vector<PathEntry> &path);
+    void updatePath(const LLNode* goal, std::vector<PathEntry> &path, int t_min=0);
 
 	inline void pushNodeToOpenAndFocal(SIPPNode* node);
     inline void pushNodeToFocal(SIPPNode* node);

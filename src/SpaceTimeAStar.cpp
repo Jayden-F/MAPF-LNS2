@@ -25,7 +25,7 @@ Path SpaceTimeAStar::findOptimalPath(const HLNode& node, const ConstraintTable& 
 
 // find path by time-space A* search
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SpaceTimeAStar::findPath(const ConstraintTable& constraint_table, int planning_window_length)
+Path SpaceTimeAStar::findPath(const ConstraintTable& constraint_table, int depth_limit, int t_min)
 {
     reset();
     Path path;
@@ -172,6 +172,11 @@ Path SpaceTimeAStar::findPath(const ConstraintTable& constraint_table, int plann
 
     releaseNodes();
     return path;
+}
+
+Path SpaceTimeAStar::findPath(ReservationTable& ReservationTable, int depth_limit, int t_min)
+{
+    return Path();
 }
 
 // find path by time-space A* search

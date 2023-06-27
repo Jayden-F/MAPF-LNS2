@@ -1,32 +1,38 @@
 #include "SIPP.h"
 
-void SIPP::updatePath(const LLNode* goal, vector<PathEntry> &path)
+void SIPP::updatePath(const LLNode* goal, vector<PathEntry> &path, int t_min)
 {
     num_collisions = goal->num_of_conflicts;
-	path.resize(goal->timestep + 1);
+	path.resize(goal->timestep + 1 - t_min);
 	// num_of_conflicts = goal->num_of_conflicts;
 
 	const auto* curr = goal;
 	while (curr->parent != nullptr) // non-root node
 	{
 		const auto* prev = curr->parent;
-		int t = prev->timestep + 1;
-		while (t < curr->timestep)
+		int t = prev->timestep + 1 - t_min;
+		while (t < curr->timestep - t_min)
 		{
 			path[t].location = prev->location; // wait at prev location
 			t++;
 		}
-		path[curr->timestep].location = curr->location; // move to curr location
+		path[curr->timestep - t_min].location = curr->location; // move to curr location
 		curr = prev;
 	}
-	assert(curr->timestep == 0);
-	path[0].location = curr->location;
+    assert(curr->timestep == t_min);
+    path[0].location = curr->location;
+
+    for (int i = 0; i < (int)path.size(); i++)
+    {
+        assert(path[i].location != -1);
+    }
+    assert(start_location == path[0].location);
 }
 
 
 // find path by A*
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
+Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit, int t_min)
 {
     reset();
     //Path path = findNoCollisionPath(constraint_table);
@@ -53,7 +59,7 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
         num_expanded++;
         assert(curr->location >= 0);
         // check if the popped node is a goal
-        if (curr->is_goal or curr->g_val >= depth_limit)
+        if (curr->is_goal or curr->g_val >= t_min + depth_limit)
         {
             updatePath(curr, path);
             break;
@@ -65,7 +71,7 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
             int future_collisions = constraint_table.getFutureNumOfCollisions(curr->location, curr->timestep);
             if (future_collisions == 0)
             {
-                updatePath(curr, path);
+                updatePath(curr, path, t_min);
                 break;
             }
             // generate a goal node
@@ -136,22 +142,24 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
 
 // find path by A*
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
+Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit, int t_min)
 {
     reset();
     //Path path = findNoCollisionPath(constraint_table);
     //if (!path.empty())
     //    return path;
     // ReservationTable reservation_table(constraint_table, goal_location);
+
     Path path;
-    Interval interval = reservation_table.get_first_safe_interval(start_location);
-    if (get<0>(interval) > 0)
+    Interval interval = Interval();
+    if (!reservation_table.find_safe_interval(interval, start_location, t_min))
+    // if (get<0>(interval) > 0)
         return path;
     auto holding_time = reservation_table.constraint_table.getHoldingTime(goal_location, reservation_table.constraint_table.length_min);
     auto last_target_collision_time = reservation_table.constraint_table.getLastCollisionTimestep(goal_location);
     // generate start and add it to the OPEN & FOCAL list
     auto h = max(max(my_heuristic[start_location], holding_time), last_target_collision_time + 1);
-    auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
+    auto start = new SIPPNode(start_location, t_min, h, nullptr, t_min, get<1>(interval), get<1>(interval),
                                 get<2>(interval), get<2>(interval));
     pushNodeToFocal(start);
 
@@ -163,9 +171,9 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
         num_expanded++;
         assert(curr->location >= 0);
         // check if the popped node is a goal
-        if (curr->is_goal or curr->g_val >= depth_limit)
+        if (curr->is_goal or curr->g_val >= t_min + depth_limit)
         {
-            updatePath(curr, path);
+            updatePath(curr, path, t_min);
             break;
         }
         else if (curr->location == goal_location && // arrive at the goal location
@@ -175,7 +183,7 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
             int future_collisions = reservation_table.constraint_table.getFutureNumOfCollisions(curr->location, curr->timestep);
             if (future_collisions == 0)
             {
-                updatePath(curr, path);
+                updatePath(curr, path, t_min);
                 break;
             }
             // generate a goal node

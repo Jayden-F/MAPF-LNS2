@@ -17,33 +17,31 @@ void PathTable::insertPath(int agent_id, const Path &path)
     makespan = max(makespan, (int) path.size() - 1);
 }
 
-void PathTable::insertPath(int agent_id, const Path &path, int length)
+
+// Please optimise the following function for speed
+void PathTable::insertPath(int agent_id, const Path &path, int length, int t_min)
 {
     if (path.empty())
         return;
 
-    int remaining_length = (int)path.size();
+
+    int remaining_length = (int)path.size() - 1;
 
     for (int t = 0; t < length; t++)
     {
+        int offset = 0;
+        if (t_min > 0)
+            offset = 1;
+        int path_index = min(t + offset, remaining_length);
 
-        if (t < remaining_length)
-        {
-            if (table[path[t].location].size() <= t)
-                table[path[t].location].resize(t + 1, NO_AGENT);
-            // assert(table[path[t].location][t] == NO_AGENT);
-            table[path[t].location][t] = agent_id;
-        }
-        else
-        {
-            if (table[path[remaining_length - 1].location].size() <= t)
-                table[path[remaining_length - 1].location].resize(t + 1, NO_AGENT);
+        if (table[path[path_index].location].size() <= t_min + t)
+            table[path[path_index].location].resize(t_min + t + 1, NO_AGENT);
+        // assert(table[path[t].location][t] == NO_AGENT);
+        table[path[path_index].location][t_min + t] = agent_id;
 
-            table[path[remaining_length - 1].location][t] = agent_id;
-        }
     }
 
-    assert(goals[path[remaining_length - 1].location] == MAX_TIMESTEP);
+    assert(goals[path[remaining_length].location] == MAX_TIMESTEP);
     // goals[path.back().location] = (int)path.size() - 1;
     makespan = max(makespan, (int)path.size() - 1);
 }
