@@ -428,6 +428,8 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
 
     PathTable path_table = PathTable(instance.map_size);
     ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
+    ReservationTable reservation_table(constraint_table, 0);
+
     Path windowed_path = Path();
     std::vector<Path> windowed_paths(max_agents);
 
@@ -467,7 +469,8 @@ bool LNS::runWinPP(int time_horizon, int replanning_period)
                      << "Agent " << agents[id].id << endl;
 
             start = Time::now();
-            agents[id].path = agents[id].path_planner->findPath(constraint_table, time_horizon);
+            reservation_table.goal_location = agents[id].path_planner->goal_location;
+            agents[id].path = agents[id].path_planner->findPath(reservation_table, time_horizon);
             findPath_time += ((fsec)(Time::now() - start)).count();
 
             // cout << "Expanded Nodes" << agents[id].path_planner->getNumExpanded() << endl;

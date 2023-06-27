@@ -8,6 +8,7 @@ class ReservationTable
 {
 public:
     const ConstraintTable& constraint_table;
+    int goal_location;
 
     ReservationTable(const ConstraintTable& constraint_table, int goal_location) :
         constraint_table(constraint_table), goal_location(goal_location), sit(constraint_table.map_size) {}
@@ -17,7 +18,6 @@ public:
     bool find_safe_interval(Interval& interval, size_t location, int t_min);
 
 private:
-    int goal_location;
 	// Safe Interval Table (SIT)
 	typedef vector< list<Interval> > SIT;
     SIT sit; // location -> [t_min, t_max), num_of_collisions
