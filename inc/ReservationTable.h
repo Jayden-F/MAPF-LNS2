@@ -19,6 +19,8 @@ public:
     list<tuple<int, int, int, bool, bool> > get_safe_intervals(int from, int to, int lower_bound, int upper_bound);
     Interval get_first_safe_interval(size_t location);
     bool find_safe_interval(Interval& interval, size_t location, int t_min);
+    void updateSIT(int location); // update SIT at the given location
+
 
 private:
 	// Safe Interval Table (SIT)
@@ -27,7 +29,6 @@ private:
     void insert2SIT(int location, int t_min, int t_max);
     void insertSoftConstraint2SIT(int location, int t_min, int t_max);
 	// void mergeIntervals(list<Interval >& intervals) const;
-	void updateSIT(int location); // update SIT at the given location
     int get_earliest_arrival_time(int from, int to, int lower_bound, int upper_bound) const;
     int get_earliest_no_collision_arrival_time(int from, int to, const Interval& interval,
                                                int lower_bound, int upper_bound) const;

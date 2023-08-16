@@ -17,9 +17,8 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 .vscode
-build_debug/
-build_release/
+build/
 /map
 /scenario
 CMakeLists.txt
-build_debug/lns
+.cache/

@@ -48,18 +48,21 @@ public:
     void insert2CAT(int agent, const vector<Path*>& paths); // build the conflict avoidance table using a set of paths
     void insert2CAT(const Path& path); // insert a path to the collision avoidance table
 	//int getCATMaxTimestep() const {return cat_max_timestep;}
+    map<int, size_t> landmarks; // <timestep, location>: the agent must be at the given location at the given timestep
+	typedef unordered_map<size_t, list< pair<int, int> > > CT; // constraint table
+	CT ct; // location -> time range, or edge -> time range
+	typedef vector< vector<bool> > CAT;
+    CAT cat;
+	vector<int> cat_goals;
+
 
 protected:
     friend class ReservationTable;
-    typedef unordered_map<size_t, list< pair<int, int> > > CT; // constraint table
-	CT ct; // location -> time range, or edge -> time range
+
 	int ct_max_timestep = 0;
     // typedef unordered_map<size_t, set< pair<int, int> > > CAT; // conflict avoidance table // location -> time range, or edge -> time range
-    typedef vector< vector<bool> > CAT;
-    CAT cat;
+
 	int cat_max_timestep = 0;
-	vector<int> cat_goals;
-    map<int, size_t> landmarks; // <timestep, location>: the agent must be at the given location at the given timestep
 
     void insertLandmark(size_t loc, int t); // insert a landmark, i.e., the agent has to be at the given location at the given timestep
 	list<pair<int, int> > decodeBarrier(int B1, int B2, int t) const;

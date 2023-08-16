@@ -1,4 +1,5 @@
 #include "SIPP.h"
+#include <cassert>
 
 void SIPP::updatePath(const LLNode* goal, vector<PathEntry> &path, int t_min)
 {
@@ -19,8 +20,10 @@ void SIPP::updatePath(const LLNode* goal, vector<PathEntry> &path, int t_min)
 		path[curr->timestep - t_min].location = curr->location; // move to curr location
 		curr = prev;
 	}
+    
     assert(curr->timestep == t_min);
     path[0].location = curr->location;
+
 
     for (int i = 0; i < (int)path.size(); i++)
     {
@@ -61,7 +64,7 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit, in
         // check if the popped node is a goal
         if (curr->is_goal or curr->g_val >= t_min + depth_limit)
         {
-            updatePath(curr, path);
+            updatePath(curr, path, t_min);
             break;
         }
         else if (curr->location == goal_location && // arrive at the goal location
@@ -149,13 +152,14 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit, int t_
     //if (!path.empty())
     //    return path;
     // ReservationTable reservation_table(constraint_table, goal_location);
+    assert(goal_location == reservation_table.goal_location);
 
     Path path;
-    Interval interval = Interval();
+    Interval interval;
     if (!reservation_table.find_safe_interval(interval, start_location, t_min))
     // if (get<0>(interval) > 0)
         return path;
-    auto holding_time = reservation_table.constraint_table.getHoldingTime(goal_location, reservation_table.constraint_table.length_min);
+    auto holding_time = reservation_table.constraint_table.getHoldingTime(goal_location, t_min);
     auto last_target_collision_time = reservation_table.constraint_table.getLastCollisionTimestep(goal_location);
     // generate start and add it to the OPEN & FOCAL list
     auto h = max(max(my_heuristic[start_location], holding_time), last_target_collision_time + 1);
@@ -244,10 +248,10 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit, int t_
         }
     }  // end while loop
 
-    //if (path.empty())
-    //{
-    //    printSearchTree();
-    //}
+    if (path.empty())
+    {
+       printSearchTree();
+    }
     releaseNodes();
     return path;
 }
