@@ -22,3 +22,4 @@ orz*
 .vscode
 build
 CMakeLists.txt
+.cache/

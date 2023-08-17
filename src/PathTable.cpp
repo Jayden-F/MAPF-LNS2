@@ -1,10 +1,9 @@
 #include "PathTable.h"
 
-void PathTable::insertPath(int agent_id, const Path &path)
+void PathTable::insertPath(int agent_id, const Path& path)
 {
     if (path.empty())
         return;
-
     for (int t = 0; t < (int)path.size(); t++)
     {
         if (table[path[t].location].size() <= t)
@@ -22,30 +21,20 @@ void PathTable::insertPath(int agent_id, const Path &path, int length)
     if (path.empty())
         return;
 
-    int remaining_length = (int)path.size();
-
+    int path_length = (int) path.size();
     for (int t = 0; t < length; t++)
     {
+        if (t >= path_length) break;
 
-        if (t < remaining_length)
-        {
-            if (table[path[t].location].size() <= t)
-                table[path[t].location].resize(t + 1, NO_AGENT);
-            // assert(table[path[t].location][t] == NO_AGENT);
-            table[path[t].location][t] = agent_id;
-        }
-        else
-        {
-            if (table[path[remaining_length - 1].location].size() <= t)
-                table[path[remaining_length - 1].location].resize(t + 1, NO_AGENT);
-
-            table[path[remaining_length - 1].location][t] = agent_id;
-        }
+        if (table[path[t].location].size() <= t)
+            table[path[t].location].resize( t + 1, NO_AGENT);
+        assert(table[path[t].location][t] == NO_AGENT);
+        table[path[t].location][t] = agent_id;
     }
 
-    assert(goals[path[remaining_length - 1].location] == MAX_TIMESTEP);
-    // goals[path.back().location] = (int)path.size() - 1;
-    makespan = max(makespan, (int)path.size() - 1);
+    assert(goals[path[min(length-1, path_length-1)].location] == MAX_TIMESTEP);
+    goals[path[min(length-1, path_length-1)].location] = min(length-1, path_length-1);
+    makespan = max(makespan, min(length, path_length));
 }
 
 void PathTable::deletePath(int agent_id, const Path &path)

@@ -362,7 +362,6 @@ bool InitLNS::runPP()
         return false;
     }
 }
-
 bool InitLNS::getInitialSolution()
 {
     neighbor.agents.clear();

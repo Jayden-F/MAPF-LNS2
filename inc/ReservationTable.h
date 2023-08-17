@@ -7,6 +7,7 @@ typedef tuple<int, int, bool> Interval; // [t_min, t_max), has collision
 class ReservationTable
 {
 public:
+    int goal_location;
     const ConstraintTable& constraint_table;
 
     ReservationTable(const ConstraintTable& constraint_table, int goal_location) :
@@ -16,11 +17,17 @@ public:
     Interval get_first_safe_interval(size_t location);
     bool find_safe_interval(Interval& interval, size_t location, int t_min);
 
+    void clear(){
+        goal_location = NO_AGENT;
+        for (int i = 0; i < (int)sit.size(); i++)
+            sit[i].clear();
+    }
+
 private:
-    int goal_location;
 	// Safe Interval Table (SIT)
 	typedef vector< list<Interval> > SIT;
     SIT sit; // location -> [t_min, t_max), num_of_collisions
+
     void insert2SIT(int location, int t_min, int t_max);
     void insertSoftConstraint2SIT(int location, int t_min, int t_max);
 	// void mergeIntervals(list<Interval >& intervals) const;

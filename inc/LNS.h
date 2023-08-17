@@ -33,8 +33,8 @@ public:
     int sum_of_costs_lowerbound = -1;
     int sum_of_distances = -1;
     int restart_times = 0;
-    int time_horizon = 0;
-    int replanning_period = 0;
+    int planning_horizon = 0;
+    int planning_period = 0;
 
     LNS(const Instance &instance, double time_limit,
         const string &init_algo_name, const string &replan_algo_name, const string &destory_name,
@@ -70,7 +70,7 @@ private:
     bool runEECBS();
     bool runCBS();
     bool runPP();
-    bool runWinPP(int planning_window_length, int commit_length);
+    bool runWinPP();
     bool runPIBT();
     bool runPPS();
     bool runWinPIBT();
