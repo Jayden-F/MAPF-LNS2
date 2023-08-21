@@ -530,6 +530,8 @@ bool LNS::runWinPP()
             
             accumPath_time += ((fsec)(Time::now() - start)).count();
 
+            if (screen >= 2)
+            {
             cout << "Planning Window: " << planning_phases << " Complete" << endl
                  << "Remaining time:  " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                  << "Agents at Goal: " << num_agents_at_goal << endl
@@ -538,6 +540,7 @@ bool LNS::runWinPP()
                  << "Find Path: " << findPath_time << endl
                  << "Add Path: " << addPath_time << endl
                  << "Accum Path " << accumPath_time << endl;
+            }
             planning_phases++;
         }
         else
