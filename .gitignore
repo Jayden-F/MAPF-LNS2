@@ -18,10 +18,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 /scen-even
-orz*
 .vscode
 build
 CMakeLists.txt
 .cache/
-map/
-scenario/

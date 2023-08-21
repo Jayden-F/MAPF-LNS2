@@ -146,7 +146,7 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
     //    return path;
     // ReservationTable reservation_table(constraint_table, goal_location);
     Path path;
-    Interval interval = reservation_table.get_first_safe_interval(start_location);
+    Interval interval = reservation_table.get_first_safe_interval(start_location, true);
     if (get<0>(interval) > 0)
         return path;
     auto holding_time = reservation_table.constraint_table.getHoldingTime(goal_location, reservation_table.constraint_table.length_min);
@@ -195,7 +195,7 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
         for (int next_location : instance.getNeighbors(curr->location)) // move to neighboring locations
         {
             for (auto & i : reservation_table.get_safe_intervals(
-                    curr->location, next_location, curr->timestep + 1, curr->high_expansion + 1))
+                    curr->location, next_location, curr->timestep + 1, curr->high_expansion + 1, true))
             {
                 int next_high_generation, next_timestep, next_high_expansion;
                 bool next_v_collision, next_e_collision;
@@ -219,7 +219,7 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
         }  // end for loop that generates successors
         // wait at the current location
         if (curr->high_expansion == curr->high_generation and
-            reservation_table.find_safe_interval(interval, curr->location, curr->high_expansion) and
+            reservation_table.find_safe_interval(interval, curr->location, curr->high_expansion, true) and
                 get<0>(interval) + curr->h_val <= reservation_table.constraint_table.length_max)
         {
             auto next_timestep = get<0>(interval);
