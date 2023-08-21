@@ -312,6 +312,7 @@ void ReservationTable::updateSIT(int location)
 // return <upper_bound, low, high,  vertex collision, edge collision>
 list<tuple<int, int, int, bool, bool>> ReservationTable::get_safe_intervals(int from, int to, int lower_bound, int upper_bound)
 {
+    sit[to].clear(); 
     list<tuple<int, int, int, bool, bool>> rst;
     if (lower_bound >= upper_bound)
         return rst;
@@ -353,18 +354,21 @@ list<tuple<int, int, int, bool, bool>> ReservationTable::get_safe_intervals(int 
 
 Interval ReservationTable::get_first_safe_interval(size_t location)
 {
+    sit[location].clear();
     if (sit[location].empty())
-	    updateSIT(location);
+        updateSIT(location);
     return sit[location].front();
 }
 
 // find a safe interval with t_min as given
 bool ReservationTable::find_safe_interval(Interval& interval, size_t location, int t_min)
 {
+    sit[location].clear();
+    
 	if (t_min >= min(constraint_table.length_max, MAX_TIMESTEP - 1) + 1)
 		return false;
     if (sit[location].empty())
-	    updateSIT(location);
+        updateSIT(location);
     for( auto & i : sit[location])
     {
         if ((int)get<0>(i) <= t_min && t_min < (int)get<1>(i))

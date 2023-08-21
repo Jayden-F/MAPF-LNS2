@@ -19,8 +19,13 @@ public:
 
     void clear(){
         goal_location = NO_AGENT;
-        for (int i = 0; i < (int)sit.size(); i++)
-            sit[i].clear();
+        for (int i = 0; i < sit.size(); i++)
+            if (!sit[i].empty())
+                sit[i].clear();
+
+        // int map_size = (int)sit.size();
+        // sit.clear();
+        // sit.resize(map_size);
     }
 
 private:

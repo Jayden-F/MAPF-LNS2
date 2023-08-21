@@ -23,3 +23,5 @@ orz*
 build
 CMakeLists.txt
 .cache/
+map/
+scenario/
