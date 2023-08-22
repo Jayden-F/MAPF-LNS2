@@ -50,7 +50,7 @@ public:
     void writeIterStatsToFile(const string &file_name) const;
     void writeResultToFile(const string &file_name) const;
     void writePathsToFile(const string &file_name) const;
-    string getSolverName() const override { return "LNS(" + init_algo_name + ";" + replan_algo_name + ")"; }
+    string getSolverName() const override { return "LNS(" + init_algo_name + ";" + replan_algo_name + ")"; };
 
 private:
     InitLNS *init_lns = nullptr;
@@ -87,4 +87,5 @@ private:
     int findRandomAgent() const;
     void randomWalk(int agent_id, int start_location, int start_timestep,
                     set<int> &neighbor, int neighbor_size, int upperbound);
+
 };
