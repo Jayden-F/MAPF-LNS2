@@ -2,7 +2,24 @@
 #pragma once
 #include "ConstraintTable.h"
 
-typedef tuple<int, int, bool> Interval; // [t_min, t_max), has collision
+struct Interval:     
+    tuple<int, int, bool, int>
+{
+    using tuple::tuple;
+    constexpr Interval(int a, int b, bool c) noexcept : tuple(a, b, c, -1)
+    { }
+    constexpr Interval(tuple<int, int, bool, int> t) noexcept : tuple(t)
+    { }
+    using tuple::operator=;
+}; // [t_min, t_max), has collision
+
+struct Collision_Interval: 
+    tuple<int, int, int, int, bool, bool> {
+    using tuple::tuple;
+    constexpr Collision_Interval(int a, int b, int c, bool e, bool f) noexcept : tuple(a, b, c, -1, e, f)
+    { }
+    using tuple::operator=;
+};
 
 class ReservationTable
 {
@@ -13,7 +30,7 @@ public:
     ReservationTable(const ConstraintTable& constraint_table, int goal_location) :
         constraint_table(constraint_table), goal_location(goal_location), sit(constraint_table.map_size) {}
 
-    list<tuple<int, int, int, bool, bool> > get_safe_intervals(int from, int to, int lower_bound, int upper_bound, bool clear_intervals = false);
+    list<Collision_Interval> get_safe_intervals(int from, int to, int lower_bound, int upper_bound, bool clear_intervals = false);
     Interval get_first_safe_interval(size_t location, bool clear_intervals = false);
     bool find_safe_interval(Interval& interval, size_t location, int t_min, bool clear_intervals = false);
 

@@ -12,6 +12,7 @@ LNS::LNS(const Instance &instance, double time_limit, const string &init_algo_na
                                                                                                    path_table(instance.map_size), pipp_option(pipp_option)
 {
     start_time = Time::now();
+
     replan_time_limit = time_limit / 100;
     if (destory_name == "Adaptive")
     {
@@ -44,6 +45,8 @@ LNS::LNS(const Instance &instance, double time_limit, const string &init_algo_na
 bool LNS::run()
 {
     // only for statistic analysis, and thus is not included in runtime
+    memory_pool.init(instance.map_size * planning_horizon);
+
     sum_of_distances = 0;
     for (const auto &agent : agents)
     {
@@ -478,7 +481,7 @@ bool LNS::runWinPP()
                      << "Agent " << agents[id].id << endl;
 
             // start = Time::now();
-            agents[id].path = agents[id].path_planner->findPath(reservation_table, planning_horizon);
+            agents[id].path = agents[id].path_planner->findPath(reservation_table, memory_pool, planning_horizon);
             // findPath_time += ((fsec)(Time::now() - start)).count();
 
             if (agents[id].path.empty()) {

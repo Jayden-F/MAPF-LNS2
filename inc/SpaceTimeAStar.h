@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "SingleAgentSolver.h"
 
-
 class AStarNode: public LLNode
 {
 public:

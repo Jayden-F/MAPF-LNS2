@@ -10,6 +10,7 @@
 #include "pibt.h"
 #include "pps.h"
 #include "winpibt.h"
+#include "Memory.h"
 
 enum destroy_heuristic
 {
@@ -35,6 +36,8 @@ public:
     int restart_times = 0;
     int planning_horizon = 0;
     int planning_period = 0;
+    MemoryPool memory_pool;
+
 
     LNS(const Instance &instance, double time_limit,
         const string &init_algo_name, const string &replan_algo_name, const string &destory_name,
@@ -53,6 +56,7 @@ public:
     string getSolverName() const override { return "LNS(" + init_algo_name + ";" + replan_algo_name + ")"; };
 
 private:
+
     InitLNS *init_lns = nullptr;
     string init_algo_name;
     string replan_algo_name;

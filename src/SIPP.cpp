@@ -86,9 +86,9 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
             for (auto & i : reservation_table.get_safe_intervals(
                     curr->location, next_location, curr->timestep + 1, curr->high_expansion + 1))
             {
-                int next_high_generation, next_timestep, next_high_expansion;
+                int next_high_generation, next_timestep, next_high_expansion, interval_index;
                 bool next_v_collision, next_e_collision;
-                tie(next_high_generation, next_timestep, next_high_expansion, next_v_collision, next_e_collision) = i;
+                tie(next_high_generation, next_timestep, next_high_expansion, interval_index, next_v_collision, next_e_collision) = i;
                 if (next_timestep + my_heuristic[next_location] > constraint_table.length_max)
                     break;
                 auto next_collisions = curr->num_of_conflicts +
@@ -107,8 +107,8 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
             }
         }  // end for loop that generates successors
         // wait at the current location
-        if (curr->high_expansion == curr->high_generation and
-            reservation_table.find_safe_interval(interval, curr->location, curr->high_expansion) and
+        if (curr->high_expansion == curr->high_generation &&
+            reservation_table.find_safe_interval(interval, curr->location, curr->high_expansion) &&
                 get<0>(interval) + curr->h_val <= constraint_table.length_max)
         {
             auto next_timestep = get<0>(interval);
@@ -138,8 +138,9 @@ Path SIPP::findPath(const ConstraintTable& constraint_table, int depth_limit)
 
 // find path by A*
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
+Path SIPP::findPath(ReservationTable& reservation_table, MemoryPool& memory_pool, int depth_limit)
 {
+    memory_pool.reset();
     reset();
     //Path path = findNoCollisionPath(constraint_table);
     //if (!path.empty())
@@ -149,19 +150,25 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
     Interval interval = reservation_table.get_first_safe_interval(start_location, true);
     if (get<0>(interval) > 0)
         return path;
-    auto holding_time = reservation_table.constraint_table.getHoldingTime(goal_location, reservation_table.constraint_table.length_min);
-    auto last_target_collision_time = reservation_table.constraint_table.getLastCollisionTimestep(goal_location);
+
+    int holding_time = reservation_table.constraint_table.getHoldingTime(goal_location, reservation_table.constraint_table.length_min);
+    int last_target_collision_time = reservation_table.constraint_table.getLastCollisionTimestep(goal_location);
     // generate start and add it to the OPEN & FOCAL list
-    auto h = max(max(my_heuristic[start_location], holding_time), last_target_collision_time + 1);
-    auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
-                                get<2>(interval), get<2>(interval));
+    int h = max(max(my_heuristic[start_location], holding_time), last_target_collision_time + 1);
+    // auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
+    //                             get<2>(interval), get<2>(interval));
+    
+    SIPPNode* start = memory_pool.generate_node(start_location + instance.map_size * get<3>(interval),start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
+                             get<2>(interval), get<2>(interval));
+    
     pushNodeToFocal(start);
 
     while (!focal_list.empty())
     {
-        auto* curr = focal_list.top();
+        SIPPNode* curr = focal_list.top();
         focal_list.pop();
         curr->in_openlist = false;
+        curr->close();
         num_expanded++;
         assert(curr->location >= 0);
         // check if the popped node is a goal
@@ -181,15 +188,15 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
                 break;
             }
             // generate a goal node
-            auto goal = new SIPPNode(*curr);
-            goal->is_goal = true;
-            goal->h_val = 0;
-            goal->num_of_conflicts += future_collisions;
+            SIPPNode goal(*curr);
+            goal.is_goal = true;
+            goal.h_val = 0;
+            goal.num_of_conflicts += future_collisions;
             // try to retrieve it from the hash table
-            if (dominanceCheck(goal))
-                pushNodeToFocal(goal);
-            else
-                delete goal;
+            if (dominanceCheck(curr->id, &goal, memory_pool)){
+                *curr = goal;
+                pushNodeToFocal(curr);
+            }
         }
 
         for (int next_location : instance.getNeighbors(curr->location)) // move to neighboring locations
@@ -197,44 +204,47 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
             for (auto & i : reservation_table.get_safe_intervals(
                     curr->location, next_location, curr->timestep + 1, curr->high_expansion + 1, true))
             {
-                int next_high_generation, next_timestep, next_high_expansion;
+                int next_high_generation, next_timestep, next_high_expansion, interval_index;
                 bool next_v_collision, next_e_collision;
-                tie(next_high_generation, next_timestep, next_high_expansion, next_v_collision, next_e_collision) = i;
+                tie(next_high_generation, next_timestep, next_high_expansion, interval_index, next_v_collision, next_e_collision) = i;
                 if (next_timestep + my_heuristic[next_location] > reservation_table.constraint_table.length_max)
                     break;
-                auto next_collisions = curr->num_of_conflicts +
+                int next_collisions = curr->num_of_conflicts +
                                     // (int)curr->collision_v * max(next_timestep - curr->timestep - 1, 0) + // wait time
                                       (int)next_v_collision + (int)next_e_collision;
-                auto next_h_val = max(my_heuristic[next_location], (next_collisions > 0?
+                int next_h_val = max(my_heuristic[next_location], (next_collisions > 0?
                     holding_time : curr->getFVal()) - next_timestep); // path max
                 // generate (maybe temporary) node
-                auto next = new SIPPNode(next_location, next_timestep, next_h_val, curr, next_timestep,
-                                         next_high_generation, next_high_expansion, next_v_collision, next_collisions);
+                // SIPPNode* next = memory_pool.generate_node( ,next_location, next_timestep, next_h_val, curr, next_timestep,
+                //                          next_high_generation, next_high_expansion, next_v_collision, next_collisions);
+                SIPPNode next(next_location, next_timestep, next_h_val, curr, next_timestep, next_high_generation, next_high_expansion, next_v_collision, next_collisions);
                 // try to retrieve it from the hash table
-                if (dominanceCheck(next))
-                    pushNodeToFocal(next);
-                else
-                    delete next;
+                if (dominanceCheck(next.location + instance.map_size * interval_index, &next, memory_pool))
+                {
+                    SIPPNode* next_ptr = memory_pool.replace_node(next_location + instance.map_size * interval_index, next);
+                    pushNodeToFocal(next_ptr);
+                }
             }
         }  // end for loop that generates successors
         // wait at the current location
-        if (curr->high_expansion == curr->high_generation and
-            reservation_table.find_safe_interval(interval, curr->location, curr->high_expansion, true) and
+        if (curr->high_expansion == curr->high_generation &&
+            reservation_table.find_safe_interval(interval, curr->location, curr->high_expansion, true) &&
                 get<0>(interval) + curr->h_val <= reservation_table.constraint_table.length_max)
         {
-            auto next_timestep = get<0>(interval);
-            auto next_h_val = max(my_heuristic[curr->location], (get<2>(interval) ? holding_time : curr->getFVal()) - next_timestep); // path max
-            auto next_collisions = curr->num_of_conflicts +
+            int next_timestep = get<0>(interval);
+            int next_h_val = max(my_heuristic[curr->location], (get<2>(interval) ? holding_time : curr->getFVal()) - next_timestep); // path max
+            int next_collisions = curr->num_of_conflicts +
                     // (int)curr->collision_v * max(next_timestep - curr->timestep - 1, 0) +
 		    (int)get<2>(interval);
-            auto next = new SIPPNode(curr->location, next_timestep, next_h_val, curr, next_timestep,
+            SIPPNode next(curr->location, next_timestep, next_h_val, curr, next_timestep,
                                      get<1>(interval), get<1>(interval), get<2>(interval),
                                      next_collisions);
-            next->wait_at_goal = (curr->location == goal_location);
-            if (dominanceCheck(next))
-                pushNodeToFocal(next);
-            else
-                delete next;
+            next.wait_at_goal = (curr->location == goal_location);
+            if (dominanceCheck(next.location + instance.map_size * get<3>(interval), &next, memory_pool))
+            {
+                SIPPNode* next_ptr = memory_pool.replace_node(next.location + instance.map_size * get<3>(interval), next);
+                pushNodeToFocal(next_ptr);
+            }
         }
     }  // end while loop
 
@@ -242,8 +252,8 @@ Path SIPP::findPath(ReservationTable& reservation_table, int depth_limit)
     //{
     //    printSearchTree();
     //}
-    releaseNodes();
-    return path;
+        releaseNodes();
+        return path;
 }
 
 
@@ -310,9 +320,9 @@ pair<Path, int> SIPP::findSuboptimalPath(const HLNode& node, const ConstraintTab
 			for (auto & i : reservation_table.get_safe_intervals(
 				curr->location, next_location, curr->timestep + 1, curr->high_expansion + 1))
 			{
-			    int next_high_generation, next_timestep, next_high_expansion;
+			    int next_high_generation, next_timestep, next_high_expansion, index_interval;
                 bool next_v_collision, next_e_collision;
-                tie(next_high_generation, next_timestep, next_high_expansion, next_v_collision, next_e_collision) = i;
+                tie(next_high_generation, next_timestep, next_high_expansion, index_interval, next_v_collision, next_e_collision) = i;
                 // compute cost to next_id via curr node
                 int next_g_val = next_timestep;
                 int next_h_val = max(my_heuristic[next_location], curr->getFVal() - next_g_val);  // path max
@@ -416,7 +426,7 @@ pair<Path, int> SIPP::findSuboptimalPath(const HLNode& node, const ConstraintTab
 int SIPP::getTravelTime(int start, int end, const ConstraintTable& constraint_table, int upper_bound)
 {
     reset();
-    min_f_val = -1; // this disables focal list
+    min_f_val = -1; // this disables focal lis
     int length = MAX_TIMESTEP;
     auto root = new SIPPNode(start, 0, compute_heuristic(start, end), nullptr, 0, 1, 1, 0, 0);
     pushNodeToOpenAndFocal(root);
@@ -595,6 +605,52 @@ bool SIPP::dominanceCheck(SIPPNode* new_node)
                 new_node->high_expansion = old_node->timestep;
             }
         }
+    }
+    return true;
+}
+
+
+bool SIPP::dominanceCheck(int id, SIPPNode* new_node, MemoryPool& memory_pool)
+{
+    SIPPNode* old_node(nullptr);
+
+    if (!memory_pool.has_node(id)) 
+        return true;
+
+    old_node = memory_pool.get_node(id);
+
+    // for (auto & old_node : ptr)
+    // {
+        if (old_node->timestep <= new_node->timestep and
+            old_node->num_of_conflicts <= new_node->num_of_conflicts)
+        { // the new node is dominated by the old node
+            return false;
+        }
+        else if (old_node->timestep >= new_node->timestep and
+                old_node->num_of_conflicts >= new_node->num_of_conflicts) // the old node is dominated by the new node
+        { // delete the old node
+            if (old_node->in_openlist) // the old node has not been expanded yet
+                eraseNodeFromLists(old_node); // delete it from open and/or focal lists
+            else // the old node has been expanded already
+                num_reopened++; //re-expand it
+            useless_nodes.push_back(old_node);
+            // ptr->second.remove(old_node);
+            num_generated--; // this is because we later will increase num_generated when we insert the new node into lists.
+            return true;
+        }
+        else if(old_node->timestep < new_node->high_expansion and new_node->timestep < old_node->high_expansion)
+        { // intervals overlap --> we need to split the node to make them disjoint
+            if (old_node->timestep <= new_node->timestep)
+            {
+                assert(old_node->num_of_conflicts > new_node->num_of_conflicts);
+                old_node->high_expansion = new_node->timestep;
+            }
+            else // i.e., old_node->timestep > new_node->timestep
+            {
+                assert(old_node->num_of_conflicts <= new_node->num_of_conflicts);
+                new_node->high_expansion = old_node->timestep;
+            }
+        // }
     }
     return true;
 }
