@@ -13,14 +13,12 @@ public:
 	int high_generation; // the upper bound with respect to generation
     int high_expansion; // the upper bound with respect to expansion
 	bool collision_v;
-	bool is_closed = false;
-    int label = -1;
-    int id = -1;
+
     SIPPNode() : LLNode() {}
 	SIPPNode(int loc, int g_val, int h_val, SIPPNode* parent, int timestep, int high_generation, int high_expansion,
 	        bool collision_v, int num_of_conflicts) :
             LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), high_generation(high_generation),
-            high_expansion(high_expansion), collision_v(collision_v), is_closed(false), label(-1), id(-1) {}
+            high_expansion(high_expansion), collision_v(collision_v) {}
 	// SIPPNode(const SIPPNode& other): LLNode(other), high_generation(other.high_generation), high_expansion(other.high_expansion),
         //                              collision_v(other.collision_v) {}
 	~SIPPNode() {}
@@ -32,23 +30,12 @@ public:
         high_generation = other.high_generation;
         high_expansion = other.high_expansion;
         collision_v = other.collision_v;
-		is_closed = other.is_closed;
-		label = other.label;
-		id = other.id;
     }
-	void close(){
-		is_closed = true;
-	}
 	void reset(){
-		location = -1;
-		g_val = 0;
-		h_val = 0;
-		parent = nullptr;
-		timestep = 0;
+		LLNode::reset();
 		high_generation = 0;
 		high_expansion = 0;
 	    collision_v = 0;
-		num_of_conflicts = 0;
 	}
 	// The following is used by for generating the hash value of a nodes
 	struct NodeHasher

@@ -10,7 +10,7 @@
 #include "pibt.h"
 #include "pps.h"
 #include "winpibt.h"
-#include "Memory.h"
+#include "MemoryPool.h"
 
 enum destroy_heuristic
 {
@@ -38,7 +38,6 @@ public:
     int planning_period = 0;
     MemoryPool memory_pool;
 
-
     LNS(const Instance &instance, double time_limit,
         const string &init_algo_name, const string &replan_algo_name, const string &destory_name,
         int neighbor_size, int num_of_iterations, bool init_lns, const string &init_destory_name, bool use_sipp,
@@ -56,7 +55,6 @@ public:
     string getSolverName() const override { return "LNS(" + init_algo_name + ";" + replan_algo_name + ")"; };
 
 private:
-
     InitLNS *init_lns = nullptr;
     string init_algo_name;
     string replan_algo_name;
@@ -91,5 +89,4 @@ private:
     int findRandomAgent() const;
     void randomWalk(int agent_id, int start_location, int start_timestep,
                     set<int> &neighbor, int neighbor_size, int upperbound);
-
 };

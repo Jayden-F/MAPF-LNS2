@@ -45,7 +45,7 @@ LNS::LNS(const Instance &instance, double time_limit, const string &init_algo_na
 bool LNS::run()
 {
     // only for statistic analysis, and thus is not included in runtime
-    memory_pool.init(instance.map_size * planning_horizon);
+    memory_pool.init(instance.map_size * (planning_horizon + 1));
 
     sum_of_distances = 0;
     for (const auto &agent : agents)
@@ -354,10 +354,10 @@ bool LNS::runPP()
 {
     auto shuffled_agents = neighbor.agents;
     std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
-    if (screen >= 2) {
+    if (screen >= 2)
+    {
         for (auto id : shuffled_agents)
-            cout << id << "(" << agents[id].path_planner->my_heuristic[agents[id].path_planner->start_location] <<
-                "->" << agents[id].path.size() - 1 << "), ";
+            cout << id << "(" << agents[id].path_planner->my_heuristic[agents[id].path_planner->start_location] << "->" << agents[id].path.size() - 1 << "), ";
         cout << endl;
     }
     int remaining_agents = (int)shuffled_agents.size();
@@ -365,7 +365,7 @@ bool LNS::runPP()
     neighbor.sum_of_costs = 0;
     runtime = ((fsec)(Time::now() - start_time)).count();
     double T = time_limit - runtime; // time limit
-    if (!iteration_stats.empty()) // replan
+    if (!iteration_stats.empty())    // replan
         T = min(T, replan_time_limit);
     auto time = Time::now();
     ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
@@ -373,11 +373,11 @@ bool LNS::runPP()
     {
         int id = *p;
         if (screen >= 3)
-            cout << "Remaining agents = " << remaining_agents <<
-                 ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+            cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                  << "Agent " << agents[id].id << endl;
         agents[id].path = agents[id].path_planner->findPath(constraint_table);
-        if (agents[id].path.empty()) break;
+        if (agents[id].path.empty())
+            break;
         neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
         if (neighbor.sum_of_costs >= neighbor.old_sum_of_costs)
             break;
@@ -440,12 +440,12 @@ bool LNS::runWinPP()
     ReservationTable reservation_table(constraint_table, NO_AGENT);
     std::vector<Path> accumulated_paths(max_agents);
 
-
     runtime = ((fsec)(Time::now() - start_time)).count();
     double T = time_limit - runtime; // time limit
-    if (!iteration_stats.empty()) T = min(T, replan_time_limit); // replan time limit
+    if (!iteration_stats.empty())
+        T = min(T, replan_time_limit); // replan time limit
     auto time = Time::now();
-    while (num_agents_at_goal < max_agents  && ((fsec)(Time::now() - time)).count() < T)
+    while (num_agents_at_goal < max_agents && ((fsec)(Time::now() - time)).count() < T)
     {
 
         // start = Time::now();
@@ -455,21 +455,14 @@ bool LNS::runWinPP()
         // clearData_time += ((fsec)(Time::now() - start)).count();
 
         auto shuffled_agents = neighbor.agents;
-        std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); //shuffle agents
-        //reduce priority of agents on goal
-        std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id){const Agent& agent = agents[id]; return !agent.at_goal;}); 
-
-        if (screen >= 2)
-        {
-            for (auto id : shuffled_agents)
-                cout << id << "(" << agents[id].path_planner->my_heuristic[agents[id].path_planner->start_location] << "->" << agents[id].path.size() - 1 << "), ";
-            cout << endl;
-        }
+        std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
+        // reduce priority of agents on goal
+        std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
+                              {const Agent& agent = agents[id]; return !agent.at_goal; });
 
         int remaining_agents = (int)shuffled_agents.size();
         auto p = shuffled_agents.begin();
         neighbor.sum_of_costs = 0;
-
 
         while (p != shuffled_agents.end())
         {
@@ -484,7 +477,9 @@ bool LNS::runWinPP()
             agents[id].path = agents[id].path_planner->findPath(reservation_table, memory_pool, planning_horizon);
             // findPath_time += ((fsec)(Time::now() - start)).count();
 
-            if (agents[id].path.empty()) {
+            if (agents[id].path.empty())
+            {
+                cout << "Agent Failed: " << agents[id].id << endl;
                 // wastedTime += ((fsec)(Time::now() - time)).count();
                 break;
             }
@@ -505,24 +500,25 @@ bool LNS::runWinPP()
             // start = Time::now();
             for (int id = 0; id < max_agents; id++)
             {
-                // Resize vector to account for next window. 
+                // Resize vector to account for next window.
                 int max_length = min(planning_period, (int)agents[id].path.size()) - 1;
                 accumulated_paths[id].resize((int)accumulated_paths[id].size() + planning_period, agents[id].path[max_length]);
 
                 // Add new plan onto the end of previous plan
                 int start_index = (planning_phases > 0 && agents[id].path.size() > 1) ? 1 : 0;
-                for (int loc = start_index;  loc < max_length; loc++)
+                for (int loc = start_index; loc < max_length; loc++)
                     accumulated_paths[id][planning_phases * planning_period + loc - start_index] = agents[id].path[loc];
 
-                // Move agent to next planning phase and check if at goal                                               
-                agents[id].at_goal = false;                                                    //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
+                // Move agent to next planning phase and check if at goal
+                agents[id].at_goal = false; //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
                 agents[id].path_planner->start_location = agents[id].path[max_length].location;
-                if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location){
+                if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location)
+                {
                     agents[id].at_goal = true;
                     num_agents_at_goal++;
                 }
             }
-            
+
             // accumPath_time += ((fsec)(Time::now() - start)).count();
 
             // if (screen >= 1)
@@ -543,7 +539,7 @@ bool LNS::runWinPP()
         {
             if (p != shuffled_agents.end())
                 num_of_failures++;
-                return false; 
+            // return false;
         }
     }
 
@@ -552,7 +548,7 @@ bool LNS::runWinPP()
     {
         // Prune waiting at goal from end of plan.
         for (int time_step = accumulated_paths[id].size() - 1; time_step >= 0; time_step--)
-        { 
+        {
             if (accumulated_paths[id][time_step].location != agents[id].path_planner->goal_location)
             {
                 accumulated_paths[id].resize(time_step + 2);
@@ -1035,7 +1031,7 @@ void LNS::writeResultToFile(const string &file_name) const
         auc += (prev->sum_of_costs - sum_of_distances) * (time_limit - prev->runtime);
     }
     ofstream stats(name, std::ios::app);
-    stats << runtime << "," << sum_of_costs << "," << initial_sum_of_costs << "," << max(sum_of_distances, sum_of_costs_lowerbound) << "," << sum_of_distances << "," << iteration_stats.size() << "," << (int)agents.size()<< "," << average_group_size << "," << initial_solution_runtime << "," << restart_times << "," << auc << "," << num_LL_expanded << "," << num_LL_generated << "," << num_LL_reopened << "," << num_LL_runs << "," << preprocessing_time << "," << getSolverName() << "," << instance.getInstanceName() << "," << planning_horizon << "," << planning_period << endl;
+    stats << runtime << "," << sum_of_costs << "," << initial_sum_of_costs << "," << max(sum_of_distances, sum_of_costs_lowerbound) << "," << sum_of_distances << "," << iteration_stats.size() << "," << (int)agents.size() << "," << average_group_size << "," << initial_solution_runtime << "," << restart_times << "," << auc << "," << num_LL_expanded << "," << num_LL_generated << "," << num_LL_reopened << "," << num_LL_runs << "," << preprocessing_time << "," << getSolverName() << "," << instance.getInstanceName() << "," << planning_horizon << "," << planning_period << endl;
     stats.close();
 }
 

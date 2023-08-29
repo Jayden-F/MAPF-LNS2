@@ -14,6 +14,9 @@ public:
 	bool in_openlist = false;
 	bool wait_at_goal = false; // the action is to wait at the goal vertex or not. This is used for >lenghth constraints
     bool is_goal = false;
+	bool is_closed = false;
+    int label = -1;
+    int id = -1;
 	// the following is used to comapre nodes in the OPEN list
 	struct compare_node
 	{
@@ -57,7 +60,7 @@ public:
 	LLNode() {}
 	LLNode(int location, int g_val, int h_val, LLNode* parent, int timestep, int num_of_conflicts) :
 		location(location), g_val(g_val), h_val(h_val), parent(parent), timestep(timestep),
-		num_of_conflicts(num_of_conflicts) {}
+		num_of_conflicts(num_of_conflicts), is_closed(false), label(-1), id(-1) {}
 	LLNode(const LLNode& other) { copy(other); }
     ~LLNode()= default;
 
@@ -71,8 +74,29 @@ public:
 		num_of_conflicts = other.num_of_conflicts;
 		wait_at_goal = other.wait_at_goal;
 		is_goal = other.is_goal;
+		is_closed = other.is_closed;
+		label = other.label;
+		id = other.id;
 	}
     inline int getFVal() const { return g_val + h_val; }
+
+	void reset(){
+		location = 0;
+		g_val = 0;
+		h_val = 0;
+		parent = 0;
+		timestep = 0;
+		num_of_conflicts = 0;
+		wait_at_goal = false;
+		is_goal = 0;
+		is_closed = false;
+		label = -1;
+		id = -1;
+	}
+
+	void close(){
+		is_closed = true;
+	}
 };
 
 std::ostream& operator<<(std::ostream& os, const LLNode& node);
