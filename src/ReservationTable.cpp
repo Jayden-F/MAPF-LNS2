@@ -198,13 +198,15 @@ void ReservationTable::updateSIT(int location)
         {
             for (int t = 0; t < (int)constraint_table.path_table_for_CT->table[location].size(); t++)
             {
-                if (constraint_table.path_table_for_CT->table[location][t] != NO_AGENT)
+                if (constraint_table.path_table_for_CT->table[location][t].id != NO_AGENT &&
+                    constraint_table.path_table_for_CT->table[location][t].label == constraint_table.path_table_for_CT->label)
                 {
                     insert2SIT(location, t, t + 1);
                 }
             }
-            if (constraint_table.path_table_for_CT->goals[location] < MAX_TIMESTEP) // target conflict
-                insert2SIT(location, constraint_table.path_table_for_CT->goals[location], MAX_TIMESTEP + 1);
+            if (constraint_table.path_table_for_CT->goals[location].timestep < MAX_TIMESTEP &&
+                constraint_table.path_table_for_CT->goals[location].label == constraint_table.path_table_for_CT->label) // target conflict
+                insert2SIT(location, constraint_table.path_table_for_CT->goals[location].timestep, MAX_TIMESTEP + 1);
         }
         else // edge conflict
         {
@@ -216,9 +218,9 @@ void ReservationTable::updateSIT(int location)
                                      constraint_table.path_table_for_CT->table[to].size() + 1);
                 for (int t = 1; t < t_max; t++)
                 {
-                    if (constraint_table.path_table_for_CT->table[to][t - 1] != NO_AGENT and
-                        constraint_table.path_table_for_CT->table[to][t - 1] ==
-                            constraint_table.path_table_for_CT->table[from][t])
+                    if (constraint_table.path_table_for_CT->table[to][t - 1].id != NO_AGENT &&
+                        constraint_table.path_table_for_CT->table[to][t - 1].id == constraint_table.path_table_for_CT->table[from][t].id &&
+                        constraint_table.path_table_for_CT->table[to][t - 1].label == constraint_table.path_table_for_CT->label)
                     {
                         insert2SIT(location, t, t + 1);
                     }

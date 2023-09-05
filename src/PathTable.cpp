@@ -1,19 +1,22 @@
 #include "PathTable.h"
 
-void PathTable::insertPath(int agent_id, const Path& path)
+void PathTable::insertPath(int agent_id, const Path &path)
 {
     if (path.empty())
         return;
     for (int t = 0; t < (int)path.size(); t++)
     {
         if (table[path[t].location].size() <= t)
-            table[path[t].location].resize(t + 1, NO_AGENT);
+            table[path[t].location].resize(t + 1, LabeledAgentID());
         // assert(table[path[t].location][t] == NO_AGENT);
-        table[path[t].location][t] = agent_id;
+        table[path[t].location][t].id = agent_id;
+        table[path[t].location][t].label = label;
     }
-    assert(goals[path.back().location] == MAX_TIMESTEP);
-    goals[path.back().location] = (int) path.size() - 1;
-    makespan = max(makespan, (int) path.size() - 1);
+    assert(goals[path.back().location].timestep == MAX_TIMESTEP || goals[path.back().location].label != label);
+    goals[path.back().location].timestep = (int)path.size() - 1;
+    goals[path.back().location].label = label;
+
+    makespan = max(makespan, (int)path.size() - 1);
 }
 
 void PathTable::insertPath(int agent_id, const Path &path, int length)
@@ -21,19 +24,22 @@ void PathTable::insertPath(int agent_id, const Path &path, int length)
     if (path.empty())
         return;
 
-    int path_length = (int) path.size();
+    int path_length = (int)path.size();
     for (int t = 0; t < length; t++)
     {
-        if (t >= path_length) break;
+        if (t >= path_length)
+            break;
 
         if (table[path[t].location].size() <= t)
-            table[path[t].location].resize( t + 1, NO_AGENT);
-        assert(table[path[t].location][t] == NO_AGENT);
-        table[path[t].location][t] = agent_id;
+            table[path[t].location].resize(t + 1, LabeledAgentID());
+        assert(table[path[t].location][t].id == NO_AGENT || table[path[t].location][t].label != label);
+        table[path[t].location][t].id = agent_id;
+        table[path[t].location][t].label = label;
     }
 
-    assert(goals[path[min(length-1, path_length-1)].location] == MAX_TIMESTEP);
-    goals[path[min(length-1, path_length-1)].location] = min(length-1, path_length-1);
+    assert(goals[path[min(length - 1, path_length - 1)].location].timestep == MAX_TIMESTEP || goals[path[min(length - 1, path_length - 1)].location].label != label);
+    goals[path[min(length - 1, path_length - 1)].location].timestep = min(length - 1, path_length - 1);
+    goals[path[min(length - 1, path_length - 1)].location].label = label;
     makespan = max(makespan, min(length, path_length));
 }
 
@@ -43,17 +49,45 @@ void PathTable::deletePath(int agent_id, const Path &path)
         return;
     for (int t = 0; t < (int)path.size(); t++)
     {
-        assert(table[path[t].location].size() > t && table[path[t].location][t] == agent_id);
-        table[path[t].location][t] = NO_AGENT;
+        assert(table[path[t].location].size() > t && table[path[t].location][t].id == agent_id and table[path[t].location][t].label == label);
+        table[path[t].location][t].id = NO_AGENT;
+        table[path[t].location][t].label = -1;
     }
-    goals[path.back().location] = MAX_TIMESTEP;
+    goals[path.back().location].timestep = MAX_TIMESTEP;
     if (makespan == (int)path.size() - 1) // re-compute makespan
     {
         makespan = 0;
-        for (int time : goals)
+        for (auto goal : goals)
         {
-            if (time < MAX_TIMESTEP && time > makespan)
-                makespan = time;
+            if (goal.timestep < MAX_TIMESTEP && goal.timestep > makespan)
+                makespan = goal.timestep;
+        }
+    }
+}
+
+void PathTable::deletePath(int agent_id, const Path &path, int length)
+{
+    if (path.empty())
+        return;
+
+    int path_length = (int)path.size();
+    for (int t = 0; t < length; t++)
+    {
+        if (t >= path_length)
+            break;
+        assert(table[path[t].location].size() > t && table[path[t].location][t].id == agent_id and table[path[t].location][t].label == label);
+        table[path[t].location][t].id = NO_AGENT;
+        table[path[t].location][t].label = -1;
+    }
+    goals[path[min(length - 1, path_length - 1)].location].timestep = MAX_TIMESTEP;
+    goals[path[min(length - 1, path_length - 1)].location].label = -1;
+    if (makespan == (int)path.size() - 1) // re-compute makespan
+    {
+        makespan = 0;
+        for (auto goal : goals)
+        {
+            if (goal.timestep < MAX_TIMESTEP && goal.timestep > makespan)
+                makespan = goal.timestep;
         }
     }
 }
@@ -62,15 +96,19 @@ bool PathTable::constrained(int from, int to, int to_time) const
 {
     if (!table.empty())
     {
-        if (table[to].size() > to_time && table[to][to_time] != NO_AGENT)
+        if (table[to].size() > to_time && table[to][to_time].id != NO_AGENT &&
+            table[to][to_time].label == label)
             return true; // vertex conflict with agent table[to][to_time]
         else if (table[to].size() >= to_time && table[from].size() > to_time && !table[to].empty() &&
-                 table[to][to_time - 1] != NO_AGENT && table[from][to_time] == table[to][to_time - 1])
+                 table[to][to_time - 1].id != NO_AGENT &&
+                 table[to][to_time - 1].label == label &&
+                 table[from][to_time].id == table[to][to_time - 1].id &&
+                 table[from][to_time].label == label)
             return true; // edge conflict with agent table[to][to_time - 1]
     }
     if (!goals.empty())
     {
-        if (goals[to] <= to_time)
+        if (goals[to].timestep <= to_time && goals[to].label == label)
             return true; // target conflict
     }
     return false;
@@ -80,11 +118,17 @@ void PathTable::getConflictingAgents(int agent_id, set<int> &conflicting_agents,
 {
     if (table.empty())
         return;
-    if (table[to].size() > to_time && table[to][to_time] != NO_AGENT)
-        conflicting_agents.insert(table[to][to_time]); // vertex conflict
-    if (table[to].size() >= to_time && table[from].size() > to_time &&
-        table[to][to_time - 1] != NO_AGENT && table[from][to_time] == table[to][to_time - 1])
-        conflicting_agents.insert(table[from][to_time]); // edge conflict
+    if (table[to].size() > to_time &&
+        table[to][to_time].id != NO_AGENT &&
+        table[to][to_time].label == label)
+        conflicting_agents.insert(table[to][to_time].id); // vertex conflict
+    if (table[to].size() >= to_time &&
+        table[from].size() > to_time &&
+        table[to][to_time - 1].id != NO_AGENT &&
+        table[to][to_time - 1].label != label &&
+        table[from][to_time].id == table[to][to_time - 1].id &&
+        table[from][to_time].label == label)
+        conflicting_agents.insert(table[from][to_time].id); // edge conflict
     // TODO: collect target conflicts as well.
 }
 
@@ -94,8 +138,8 @@ void PathTable::get_agents(set<int> &conflicting_agents, int loc) const
         return;
     for (auto agent : table[loc])
     {
-        if (agent >= 0)
-            conflicting_agents.insert(agent);
+        if (agent.id >= 0 && agent.label == label)
+            conflicting_agents.insert(agent.id);
     }
 }
 
@@ -104,25 +148,25 @@ void PathTable::get_agents(set<int> &conflicting_agents, int neighbor_size, int 
     if (loc < 0 || table[loc].empty())
         return;
     int t_max = (int)table[loc].size() - 1;
-    while (table[loc][t_max] == NO_AGENT && t_max > 0)
+    while (table[loc][t_max].id == NO_AGENT && table[loc][t_max].label == label && t_max > 0)
         t_max--;
     if (t_max == 0)
         return;
     int t0 = rand() % t_max;
-    if (table[loc][t0] != NO_AGENT)
-        conflicting_agents.insert(table[loc][t0]);
+    if (table[loc][t0].id != NO_AGENT && table[loc][t0].label == label)
+        conflicting_agents.insert(table[loc][t0].id);
     int delta = 1;
     while (t0 - delta >= 0 || t0 + delta <= t_max)
     {
-        if (t0 - delta >= 0 && table[loc][t0 - delta] != NO_AGENT)
+        if (t0 - delta >= 0 && table[loc][t0 - delta].id != NO_AGENT && table[loc][t0 - delta].label == label)
         {
-            conflicting_agents.insert(table[loc][t0 - delta]);
+            conflicting_agents.insert(table[loc][t0 - delta].id);
             if ((int)conflicting_agents.size() == neighbor_size)
                 return;
         }
-        if (t0 + delta <= t_max && table[loc][t0 + delta] != NO_AGENT)
+        if (t0 + delta <= t_max && table[loc][t0 + delta].id != NO_AGENT && table[loc][t0 + delta].label == label)
         {
-            conflicting_agents.insert(table[loc][t0 + delta]);
+            conflicting_agents.insert(table[loc][t0 + delta].id);
             if ((int)conflicting_agents.size() == neighbor_size)
                 return;
         }
@@ -136,7 +180,7 @@ int PathTable::getHoldingTime(int location, int earliest_timestep = 0) const
     if (table.empty() or (int) table[location].size() <= earliest_timestep)
         return earliest_timestep;
     int rst = (int)table[location].size();
-    while (rst > earliest_timestep and table[location][rst - 1] == NO_AGENT)
+    while (rst > earliest_timestep && (table[location][rst - 1].id == NO_AGENT || table[location][rst - 1].label != label))
         rst--;
     return rst;
 }

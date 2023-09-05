@@ -3,25 +3,47 @@
 
 #define NO_AGENT -1
 
+struct LabeledAgentID
+{
+    int id;
+    int label;
+    LabeledAgentID() : id(NO_AGENT), label(-1) {}
+    LabeledAgentID(int id, int label) : id(id), label(label) {}
+};
+
+struct LabeledTimeStep
+{
+    int timestep;
+    int label;
+    LabeledTimeStep() : timestep(MAX_COST), label(-1) {}
+    LabeledTimeStep(int timestep, int label) : timestep(timestep), label(label) {}
+};
+
 class PathTable
 {
 public:
     int makespan = 0;
-    vector<vector<int>> table; // this stores the collision-free paths, the value is the id of the agent
-    vector<int> goals;         // this stores the goal locatons of the paths: key is the location, while value is the timestep when the agent reaches the goal
+    vector<vector<LabeledAgentID>> table; // this stores the collision-free paths, the value is the id of the agent
+    vector<LabeledTimeStep> goals;        // this stores the goal locatons of the paths: key is the location, while value is the timestep when the agent reaches the goal
+    int label = 0;
     void reset()
     {
-        auto map_size = table.size();
-        table.clear();
-        table.resize(map_size);
-        goals.assign(map_size, MAX_COST);
+        // auto map_size = table.size();
+        // table.clear();
+        // table.resize(map_size);
+        // for (auto &i : table)
+        //     i.assign(i.size(), LabeledAgentID());
+
+        // goals.assign((int)table.size(), LabeledTimeStep());
+        label++;
         makespan = 0;
     }
     void insertPath(int agent_id, const Path &path);
     void insertPath(int agent_id, const Path &path, int length);
 
-
     void deletePath(int agent_id, const Path &path);
+    void deletePath(int agent_id, const Path &path, int length);
+
     bool constrained(int from, int to, int to_time) const;
 
     void get_agents(set<int> &conflicting_agents, int loc) const;
@@ -29,7 +51,7 @@ public:
     void getConflictingAgents(int agent_id, set<int> &conflicting_agents, int from, int to, int to_time) const;
     ;
     int getHoldingTime(int location, int earliest_timestep) const;
-    explicit PathTable(int map_size = 0) : table(map_size), goals(map_size, MAX_COST) {}
+    explicit PathTable(int map_size = 0) : table(map_size), goals(map_size, LabeledTimeStep()) {}
 };
 
 class PathTableWC // with collisions
