@@ -42,7 +42,7 @@ case "$FLAVOUR" in
         CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=undefined")
         ;;
     asan)
-        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=address -D_GLIBCXX_DEBUG")
+        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer")
         ;;
     tsan)
         CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=thread")
