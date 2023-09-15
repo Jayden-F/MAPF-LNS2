@@ -7,6 +7,8 @@ class MemoryPool
 public:
     MemoryPool()
     {
+        chunkSize = 0;
+        numChunks = 0;
         size = 0;
         index = 0;
         nodes = nullptr;
@@ -27,7 +29,10 @@ public:
         this->size = size;
         index = 0;
         label = 0;
-        nodes = new SIPPNode[size];
+        // initialise nullptr for chunks
+        // find another method to show not init
+        numChunks = size / chunkSize;
+        nodes = new SIPPNode *[numChunks];
         ready = true;
     }
 
@@ -43,6 +48,7 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
+        // get_node_()
         return nodes[id].label == label && nodes[id].id == id;
     }
     bool is_closed(int id)
@@ -79,6 +85,7 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
+
         if (nodes[id].label != label || nodes[id].id == -1)
         {
             std::cout << "node not generated yet" << std::endl;
@@ -153,6 +160,11 @@ public:
 
     ~MemoryPool()
     {
+        // for bucket in nodes
+        // if bucket is not nullp
+        // delete bucket
+        // delete bucket ptr
+
         if (nodes != nullptr)
         {
             delete[] nodes;
@@ -161,9 +173,26 @@ public:
     }
 
 private:
-    SIPPNode *nodes;
+    SIPPNode **nodes;
+    int chunkSize;
+    int numChunks;
     int size;
     int index;
     int label;
     bool ready = false;
+
+    // find bucket id and allocate if does not exist.
+    SIPPNode *get_node_(int id)
+    {
+
+        id
+            // get bucket
+            // check if bucket exsit
+            // initialise if not exist
+
+            // return the node inside the bucket
+
+            if nullptr;
+        return bucket_id, inner_id
+    }
 };
