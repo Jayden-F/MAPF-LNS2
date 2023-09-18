@@ -1,17 +1,52 @@
 #pragma once
 #include "SIPPNode.h"
 
+const uint32_t DEFAULT_CHUNK_SIZE = 1024 * 1024;
+
+class MemoryChunk
+{
+public:
+    MemoryChunk() : nodes(nullptr){};
+
+    inline void
+    allocate()
+    {
+        nodes = new SIPPNode[DEFAULT_CHUNK_SIZE];
+    }
+
+    SIPPNode *get_node(int id)
+    {
+        if (nodes == nullptr)
+            allocate();
+
+        return &nodes[id];
+    }
+
+    inline bool
+    is_allocated()
+    {
+        return nodes != nullptr;
+    }
+
+    ~MemoryChunk()
+    {
+        delete[] nodes;
+    }
+
+private:
+    SIPPNode *nodes;
+};
+
 class MemoryPool
 {
     // every location in the map has a node with id equal to the location
 public:
     MemoryPool()
     {
-        chunkSize = 0;
         numChunks = 0;
         size = 0;
         index = 0;
-        nodes = nullptr;
+        chunks = nullptr;
         label = 0;
     };
     MemoryPool(int size)
@@ -29,10 +64,8 @@ public:
         this->size = size;
         index = 0;
         label = 0;
-        // initialise nullptr for chunks
-        // find another method to show not init
-        numChunks = size / chunkSize;
-        nodes = new SIPPNode *[numChunks];
+        numChunks = size / DEFAULT_CHUNK_SIZE;
+        chunks = new MemoryChunk[numChunks];
         ready = true;
     }
 
@@ -48,8 +81,8 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
-        // get_node_()
-        return nodes[id].label == label && nodes[id].id == id;
+        SIPPNode *node = get_node_(id);
+        return node->label == label && node->id == id;
     }
     bool is_closed(int id)
     {
@@ -58,11 +91,12 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
-        if (nodes[id].label != label)
+        SIPPNode *node = get_node_(id);
+        if (node->label != label)
         {
             return false;
         }
-        return nodes[id].is_closed;
+        return node->is_closed;
     }
     SIPPNode *get_node(int id)
     {
@@ -71,12 +105,13 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
-        if (nodes[id].label != label || nodes[id].id == -1)
+        SIPPNode *node = get_node_(id);
+        if (node->label != label || node->id == -1)
         {
             std::cout << "error node not generated yet" << std::endl;
             exit(1);
         }
-        return &(nodes[id]);
+        return node;
     }
     void close_node(int id)
     {
@@ -85,13 +120,13 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
-
-        if (nodes[id].label != label || nodes[id].id == -1)
+        SIPPNode *node = get_node_(id);
+        if (node->label != label || node->id == -1)
         {
             std::cout << "node not generated yet" << std::endl;
             exit(1);
         }
-        nodes[id].close();
+        node->close();
     }
     SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, int high_generation, int high_expansion,
                             bool collision_v, int num_of_conflicts)
@@ -103,28 +138,29 @@ public:
             exit(1);
         }
 
-        if (nodes[id].label == label && nodes[id].id != -1)
+        SIPPNode *node = get_node_(id);
+        if (node->label == label && node->id != -1)
         {
             std::cout << "node already generated " << id << "," << is_ready() << std::endl;
 
-            std::cout << "node already generated " << nodes[id].id << std::endl;
+            std::cout << "node already generated " << node->id << std::endl;
             exit(1);
         }
-        nodes[id].reset();
-        nodes[id].id = id;
-        nodes[id].label = label;
-        nodes[id].location = location;
-        nodes[id].g_val = g_val;
-        nodes[id].h_val = h_val;
-        nodes[id].parent = parent;
-        nodes[id].timestep = timestep;
-        nodes[id].high_generation = high_generation;
-        nodes[id].high_expansion = high_expansion;
-        nodes[id].collision_v = collision_v;
-        nodes[id].num_of_conflicts = num_of_conflicts;
+        node->reset();
+        node->id = id;
+        node->label = label;
+        node->location = location;
+        node->g_val = g_val;
+        node->h_val = h_val;
+        node->parent = parent;
+        node->timestep = timestep;
+        node->high_generation = high_generation;
+        node->high_expansion = high_expansion;
+        node->collision_v = collision_v;
+        node->num_of_conflicts = num_of_conflicts;
 
         index++;
-        return &(nodes[id]);
+        return node;
     }
 
     void free_node(int id)
@@ -134,22 +170,23 @@ public:
             std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
             exit(1);
         }
-        if (nodes[id].id == -1)
+        SIPPNode *node = get_node_(id);
+        if (node->id == -1)
         {
             std::cout << "node not generated yet" << std::endl;
             exit(1);
         }
-        nodes[id].reset();
+        node->reset();
         index--;
     }
 
-    SIPPNode *replace_node(int id, SIPPNode &node)
+    SIPPNode *replace_node(int id, SIPPNode &new_node)
     {
-
-        nodes[id] = node;
-        nodes[id].id = id;
-        nodes[id].label = label;
-        return &(nodes[id]);
+        SIPPNode *node = get_node_(id);
+        node = &new_node;
+        node->id = id;
+        node->label = label;
+        return node;
     }
 
     void reset()
@@ -164,17 +201,20 @@ public:
         // if bucket is not nullp
         // delete bucket
         // delete bucket ptr
-
-        if (nodes != nullptr)
+        MemoryChunk *ptr = &chunks[0];
+        for (int i = 0; i < numChunks; i++)
         {
-            delete[] nodes;
-            nodes = nullptr;
+            if (ptr->is_allocated())
+            {
+                delete[] ptr;
+                ptr = nullptr;
+                ptr++;
+            }
         }
     }
 
 private:
-    SIPPNode **nodes;
-    int chunkSize;
+    MemoryChunk *chunks;
     int numChunks;
     int size;
     int index;
@@ -184,15 +224,8 @@ private:
     // find bucket id and allocate if does not exist.
     SIPPNode *get_node_(int id)
     {
-
-        id
-            // get bucket
-            // check if bucket exsit
-            // initialise if not exist
-
-            // return the node inside the bucket
-
-            if nullptr;
-        return bucket_id, inner_id
+        int chunk_id = id / DEFAULT_CHUNK_SIZE;
+        int internal_id = id % DEFAULT_CHUNK_SIZE;
+        return chunks[chunk_id].get_node(internal_id);
     }
 };
