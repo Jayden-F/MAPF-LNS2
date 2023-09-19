@@ -1,7 +1,7 @@
 #pragma once
 #include "SIPPNode.h"
 
-const int DEFAULT_CHUNK_SIZE = 25000;
+const int DEFAULT_CHUNK_SIZE = 50000;
 
 class MemoryChunk
 {
@@ -11,7 +11,7 @@ public:
     inline void
     allocate()
     {
-        cout << "allocating nodes" << endl;
+//        cout << "allocating nodes" << endl;
         nodes = new SIPPNode[DEFAULT_CHUNK_SIZE];
     }
 
