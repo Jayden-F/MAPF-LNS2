@@ -1,7 +1,7 @@
 #pragma once
 #include "SIPPNode.h"
 
-const uint32_t DEFAULT_CHUNK_SIZE = 1024 * 1024;
+const int DEFAULT_CHUNK_SIZE = 25000;
 
 class MemoryChunk
 {
@@ -11,6 +11,7 @@ public:
     inline void
     allocate()
     {
+        cout << "allocating nodes" << endl;
         nodes = new SIPPNode[DEFAULT_CHUNK_SIZE];
     }
 
@@ -18,6 +19,12 @@ public:
     {
         if (nodes == nullptr)
             allocate();
+
+        if (id >= DEFAULT_CHUNK_SIZE)
+        {
+            std::cout << "range out of chunk size " << id << "," << DEFAULT_CHUNK_SIZE << std::endl;
+            exit(1);
+        }
 
         return &nodes[id];
     }
@@ -64,7 +71,7 @@ public:
         this->size = size;
         index = 0;
         label = 0;
-        numChunks = size / DEFAULT_CHUNK_SIZE;
+        numChunks = (size / DEFAULT_CHUNK_SIZE) + 1;
         chunks = new MemoryChunk[numChunks];
         ready = true;
     }
@@ -183,9 +190,18 @@ public:
     SIPPNode *replace_node(int id, SIPPNode &new_node)
     {
         SIPPNode *node = get_node_(id);
-        node = &new_node;
+        node->reset();
         node->id = id;
         node->label = label;
+        node->location = new_node.location;
+        node->g_val = new_node.g_val;
+        node->h_val = new_node.h_val;
+        node->parent = new_node.parent;
+        node->timestep = new_node.timestep;
+        node->high_generation = new_node.high_generation;
+        node->high_expansion = new_node.high_expansion;
+        node->collision_v = new_node.collision_v;
+        node->num_of_conflicts = new_node.num_of_conflicts;
         return node;
     }
 
@@ -222,10 +238,19 @@ private:
     bool ready = false;
 
     // find bucket id and allocate if does not exist.
-    SIPPNode *get_node_(int id)
+    SIPPNode *get_node_(int node_id)
     {
-        int chunk_id = id / DEFAULT_CHUNK_SIZE;
-        int internal_id = id % DEFAULT_CHUNK_SIZE;
+
+        int chunk_id = node_id / DEFAULT_CHUNK_SIZE;
+        int internal_id = node_id % DEFAULT_CHUNK_SIZE;
+        // std::cout << node_id << "," << chunk_id << "," << internal_id << endl;
+
+        if (chunk_id >= numChunks)
+        {
+            std::cout << "range out of memory pool size " << chunk_id << "," << index << "," << size << std::endl;
+            exit(1);
+        }
+
         return chunks[chunk_id].get_node(internal_id);
     }
 };
