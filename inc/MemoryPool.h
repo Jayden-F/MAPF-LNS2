@@ -1,105 +1,368 @@
 #pragma once
 #include "SIPPNode.h"
 
-const int DEFAULT_CHUNK_SIZE = 50000;
+const uint32_t DEFAULT_CHUNK_SIZE = 1024 * 1024; // 1MB
 
-class MemoryChunk
+namespace node_pool_ns
+{
+    static const uint64_t NBS = 8; // node block size; set this >= 8
+    static const uint64_t LOG2_NBS = 3;
+    static const uint64_t NBS_MASK = 7;
+}
+
+class cchunk
 {
 public:
-    MemoryChunk() : nodes(nullptr){};
-
-    inline void
-    allocate()
+    cchunk(size_t obj_size, size_t pool_size) : obj_size_(obj_size),
+                                                pool_size_(pool_size - (pool_size % obj_size)) // round down
     {
-//        cout << "allocating nodes" << endl;
-        nodes = new SIPPNode[DEFAULT_CHUNK_SIZE];
-    }
-
-    SIPPNode *get_node(int id)
-    {
-        if (nodes == nullptr)
-            allocate();
-
-        if (id >= DEFAULT_CHUNK_SIZE)
+        if (pool_size_ < obj_size_)
         {
-            std::cout << "range out of chunk size " << id << "," << DEFAULT_CHUNK_SIZE << std::endl;
-            exit(1);
+            std::cerr << "warthog::mem::cchunk object size < pool size; "
+                      << "setting pool size to object size" << std::endl;
+            pool_size_ = obj_size_;
         }
 
-        return &nodes[id];
+        mem_ = new char[pool_size_];
+        next_ = mem_;
+        max_ = mem_ + pool_size_;
+
+        freed_stack_ = new size_t[(pool_size_ / obj_size)];
+        stack_size_ = 0;
+    }
+
+    ~cchunk()
+    {
+        delete[] mem_;
+        delete[] freed_stack_;
+    }
+
+    inline void
+    reclaim()
+    {
+        next_ = mem_;
+        stack_size_ = 0;
+    }
+
+    inline char *
+    allocate()
+    {
+        if (next_ < max_)
+        {
+            char *retval = next_;
+            next_ += obj_size_;
+            return retval;
+        }
+
+        if (stack_size_ > 0)
+        {
+            --stack_size_;
+            return mem_ + freed_stack_[stack_size_];
+        }
+
+        return 0;
+    }
+
+    inline void
+    deallocate(char *addr)
+    {
+#ifndef NDEBUG
+        assert(mem_ >= addr);
+        if ((size_t)(addr - mem_) >= pool_size_)
+        {
+            std::cerr << "err; warthog::mem::cchunk; freeing memory outside"
+                         " range of the chunk at addr: "
+                      << &mem_ << "\n";
+        }
+#endif
+
+        freed_stack_[stack_size_] = (size_t)(addr - mem_);
+        stack_size_++;
     }
 
     inline bool
-    is_allocated()
+    contains(char *addr)
     {
-        return nodes != nullptr;
+#ifndef NDEBUG
+        assert(mem_ >= addr);
+#endif
+        if ((unsigned)(addr - mem_) < pool_size_)
+        {
+            return true;
+        }
+        return false;
     }
 
-    ~MemoryChunk()
+    inline char *
+    first_addr()
     {
-        delete[] nodes;
+        return mem_;
+    }
+
+    inline size_t
+    pool_size()
+    {
+        return pool_size_;
+    }
+
+    inline size_t
+    mem()
+    {
+        size_t bytes = sizeof(*this);
+        bytes += sizeof(char) * pool_size_;
+        bytes += sizeof(int) * (pool_size_ / obj_size_);
+        return bytes;
+    }
+
+    void
+    print(std::ostream &out)
+    {
+        out << "warthog::mem::cchunk pool_size: " << pool_size_
+            << " obj_size: " << obj_size_ << " freed_stack_ size: " << stack_size_;
     }
 
 private:
-    SIPPNode *nodes;
+    char *mem_;
+    char *next_;
+    char *max_;
+
+    size_t obj_size_;
+    size_t pool_size_;
+
+    // keep a stack of freed objects
+    size_t *freed_stack_;
+    size_t stack_size_;
+};
+
+class cpool
+{
+public:
+    cpool(size_t obj_size, size_t max_chunks) : num_chunks_(0), max_chunks_(max_chunks), obj_size_(obj_size)
+    {
+        init();
+    }
+
+    cpool(size_t obj_size) : num_chunks_(0), max_chunks_(20), obj_size_(obj_size)
+    {
+        init();
+    }
+
+    ~cpool()
+    {
+        for (size_t i = 0; i < num_chunks_; i++)
+        {
+            delete chunks_[i];
+        }
+        delete[] chunks_;
+    }
+
+    inline void
+    reclaim()
+    {
+        for (size_t i = 0; i < num_chunks_; i++)
+        {
+            chunks_[i]->reclaim();
+        }
+    }
+
+    inline char *
+    allocate()
+    {
+        char *mem_ptr = current_chunk_->allocate();
+        if (!mem_ptr)
+        {
+            // look for space in an existing chunk
+            // NB: linear-time search! increase CHUNK_SIZE_ if
+            // number of chunks grows too large
+            for (unsigned int i = 0; i < num_chunks_; i++)
+            {
+                mem_ptr = chunks_[i]->allocate();
+                if (mem_ptr)
+                {
+                    current_chunk_ = chunks_[i];
+                    return mem_ptr;
+                }
+            }
+
+            // not enough space in any existing chunk; make a new one
+            add_chunk(CHUNK_SIZE_);
+            current_chunk_ = chunks_[num_chunks_ - 1];
+            mem_ptr = current_chunk_->allocate();
+        }
+        return mem_ptr;
+    }
+
+    inline void
+    deallocate(char *addr)
+    {
+        for (unsigned int i = 0; i < num_chunks_; i++)
+        {
+            if ((unsigned)(addr - chunks_[i]->first_addr()) < chunks_[i]->pool_size())
+            {
+                chunks_[i]->deallocate(addr);
+                return;
+            }
+        }
+#ifndef NDEBUG
+        std::cerr << "err; cpool::free "
+                     "tried to free an address not in any chunk!\n";
+#endif
+    }
+
+    size_t
+    mem()
+    {
+        size_t bytes = 0;
+        for (unsigned int i = 0; i < num_chunks_; i++)
+        {
+            bytes += chunks_[i]->mem();
+        }
+        bytes += sizeof(cchunk *) * max_chunks_;
+        bytes += sizeof(*this);
+        return bytes;
+    }
+
+    void
+    print(std::ostream &out)
+    {
+        out << "warthog::mem::cpool #chunks: " << num_chunks_
+            << " #max_chunks " << max_chunks_ << " obj_size: " << obj_size_;
+        out << std::endl;
+        for (unsigned int i = 0; i < num_chunks_; i++)
+        {
+            chunks_[i]->print(out);
+            out << std::endl;
+        }
+    }
+
+private:
+    cchunk **chunks_;
+    cchunk *current_chunk_;
+
+    size_t num_chunks_;
+    size_t max_chunks_;
+    size_t obj_size_;
+    size_t CHUNK_SIZE_;
+
+    // no copy
+    cpool(const cpool &other) {}
+    cpool &
+    operator=(const cpool &other) { return *this; }
+
+    void
+    init()
+    {
+        // chunk size needs to be at least as big as one object
+        CHUNK_SIZE_ = std::max<size_t>(obj_size_, DEFAULT_CHUNK_SIZE);
+
+        chunks_ = new cchunk *[max_chunks_];
+        for (int i = 0; i < (int)max_chunks_; i++)
+        {
+            add_chunk(CHUNK_SIZE_);
+        }
+        current_chunk_ = chunks_[0];
+    }
+
+    void
+    add_chunk(size_t pool_size)
+    {
+        if (num_chunks_ < max_chunks_)
+        {
+            chunks_[num_chunks_] = new cchunk(obj_size_, pool_size);
+            num_chunks_++;
+        }
+        else
+        {
+            // make room for a new chunk
+            size_t big_max = max_chunks_ * 2;
+            cchunk **big_chunks = new cchunk *[big_max];
+            for (unsigned int i = 0; i < max_chunks_; i++)
+            {
+                big_chunks[i] = chunks_[i];
+            }
+            delete[] chunks_;
+
+            chunks_ = big_chunks;
+            max_chunks_ = big_max;
+
+            // finally; add a new chunk
+            chunks_[num_chunks_] = new cchunk(obj_size_, pool_size);
+            num_chunks_++;
+        }
+    }
 };
 
 class MemoryPool
 {
     // every location in the map has a node with id equal to the location
 public:
-    MemoryPool()
+    MemoryPool() : blocks_(0)
     {
-        numChunks = 0;
-        size = 0;
-        index = 0;
-        chunks = nullptr;
-        label = 0;
+        numblocks_ = 0;
+        label_ = 0;
     };
     MemoryPool(int size)
     {
         init(size);
     };
 
-    int generated()
+    ~MemoryPool()
     {
-        return index;
+        blockspool_->reclaim();
+        delete blockspool_;
+
+        for (size_t i = 0; i < numblocks_; i++)
+        {
+            if (blocks_[i] != 0)
+            {
+                // std::cerr << "deleting block: "<<i<<std::endl;
+                blocks_[i] = 0;
+            }
+        }
+        delete[] blocks_;
     }
 
     void init(int size)
     {
-        this->size = size;
-        index = 0;
-        label = 0;
-        numChunks = (size / DEFAULT_CHUNK_SIZE) + 1;
-        chunks = new MemoryChunk[numChunks];
-        ready = true;
+        numblocks_ = ((size) >> node_pool_ns::LOG2_NBS) + 1;
+        blocks_ = new SIPPNode *[numblocks_];
+        for (size_t i = 0; i < numblocks_; i++)
+        {
+            blocks_[i] = 0;
+        }
+
+        size_t block_sz = node_pool_ns::NBS * sizeof(SIPPNode);
+        blockspool_ = new cpool(block_sz, 1);
+
+        label_ = 0;
+        ready_ = true;
     }
 
     bool is_ready()
     {
-        return ready;
+        return ready_;
     }
 
     bool has_node(int id)
     {
-        if (id >= size)
-        {
-            std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
-            exit(1);
-        }
-        SIPPNode *node = get_node_(id);
-        return node->label == label && node->id == id;
+        // if (id >= numblocks_)
+        // {
+        //     std::cout << "range out of memory pool size " << id << "," << numblocks_ << std::endl;
+        //     exit(1);
+        // }
+        SIPPNode *node = generate(id);
+        return node->label == label_ && node->id == id;
     }
+
     bool is_closed(int id)
     {
-        if (id >= size)
-        {
-            std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
-            exit(1);
-        }
-        SIPPNode *node = get_node_(id);
-        if (node->label != label)
+        // if (id >= numblocks_)
+        // {
+        //     std::cout << "range out of memory pool size " << id << "," << numblocks_ << std::endl;
+        //     exit(1);
+        // }
+        SIPPNode *node = generate(id);
+        if (node->label != label_)
         {
             return false;
         }
@@ -107,13 +370,13 @@ public:
     }
     SIPPNode *get_node(int id)
     {
-        if (id >= size)
-        {
-            std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
-            exit(1);
-        }
-        SIPPNode *node = get_node_(id);
-        if (node->label != label || node->id == -1)
+        // if (id >= numblocks_)
+        // {
+        //     std::cout << "range out of memory pool size " << id << "," << numblocks_ << std::endl;
+        //     exit(1);
+        // }
+        SIPPNode *node = generate(id);
+        if (node->label != label_ || node->id == -1)
         {
             std::cout << "error node not generated yet" << std::endl;
             exit(1);
@@ -122,31 +385,68 @@ public:
     }
     void close_node(int id)
     {
-        if (id >= size)
+        if (id >= numblocks_)
         {
-            std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
+            std::cout << "range out of memory pool size " << id << "," << numblocks_ << std::endl;
             exit(1);
         }
-        SIPPNode *node = get_node_(id);
-        if (node->label != label || node->id == -1)
+        SIPPNode *node = generate(id);
+        if (node->label != label_ || node->id == -1)
         {
             std::cout << "node not generated yet" << std::endl;
             exit(1);
         }
         node->close();
     }
+
+    SIPPNode *generate(u_int64_t node_id)
+    {
+        u_int64_t block_id = node_id >> node_pool_ns::LOG2_NBS;
+        u_int64_t list_id = node_id & node_pool_ns::NBS_MASK;
+
+        // id outside the pool address range
+        if (block_id > numblocks_)
+        {
+            return 0;
+        }
+
+        // add a new block of nodes if necessary
+        if (!blocks_[block_id])
+        {
+            // std::cerr << "generating block: "<<block_id<<std::endl;
+            blocks_[block_id] = new (blockspool_->allocate()) SIPPNode[node_pool_ns::NBS];
+
+            // initialise memory
+            u_int64_t current_id = node_id - list_id;
+            for (uint32_t i = 0; i < node_pool_ns::NBS; i += 8)
+            {
+                new (&blocks_[block_id][i]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 1]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 2]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 3]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 4]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 5]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 6]) SIPPNode(current_id++);
+                new (&blocks_[block_id][i + 7]) SIPPNode(current_id++);
+            }
+        }
+
+        // return the node from its position in the assocated block
+        return &(blocks_[block_id][list_id]);
+    }
+
     SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, int high_generation, int high_expansion,
                             bool collision_v, int num_of_conflicts)
     {
 
-        if (id >= size)
-        {
-            std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
-            exit(1);
-        }
+        // if (id >= numblocks_)
+        // {
+        //     std::cout << "range out of memory pool size " << id << "," << numblocks_ << std::endl;
+        //     exit(1);
+        // }
 
-        SIPPNode *node = get_node_(id);
-        if (node->label == label && node->id != -1)
+        SIPPNode *node = generate(id);
+        if (node->label == label_ && node->id != -1)
         {
             std::cout << "node already generated " << id << "," << is_ready() << std::endl;
 
@@ -155,7 +455,7 @@ public:
         }
         node->reset();
         node->id = id;
-        node->label = label;
+        node->label = label_;
         node->location = location;
         node->g_val = g_val;
         node->h_val = h_val;
@@ -166,33 +466,15 @@ public:
         node->collision_v = collision_v;
         node->num_of_conflicts = num_of_conflicts;
 
-        index++;
         return node;
-    }
-
-    void free_node(int id)
-    {
-        if (id >= size)
-        {
-            std::cout << "range out of memory pool size " << id << "," << index << "," << size << std::endl;
-            exit(1);
-        }
-        SIPPNode *node = get_node_(id);
-        if (node->id == -1)
-        {
-            std::cout << "node not generated yet" << std::endl;
-            exit(1);
-        }
-        node->reset();
-        index--;
     }
 
     SIPPNode *replace_node(int id, SIPPNode &new_node)
     {
-        SIPPNode *node = get_node_(id);
+        SIPPNode *node = generate(id);
         node->reset();
         node->id = id;
-        node->label = label;
+        node->label = label_;
         node->location = new_node.location;
         node->g_val = new_node.g_val;
         node->h_val = new_node.h_val;
@@ -207,50 +489,58 @@ public:
 
     void reset()
     {
-        index = 0;
-        label++;
+        label_++;
     }
 
-    ~MemoryPool()
+    SIPPNode *get_ptr(u_int64_t node_id)
     {
-        // for bucket in nodes
-        // if bucket is not nullp
-        // delete bucket
-        // delete bucket ptr
-        MemoryChunk *ptr = &chunks[0];
-        for (int i = 0; i < numChunks; i++)
+        u_int64_t block_id = node_id >> node_pool_ns::LOG2_NBS;
+        u_int64_t list_id = node_id & node_pool_ns::NBS_MASK;
+
+        // id outside the pool address range
+        if (block_id > numblocks_)
         {
-            if (ptr->is_allocated())
-            {
-                delete[] ptr;
-                ptr = nullptr;
-                ptr++;
-            }
+            return 0;
         }
+
+        if (!blocks_[block_id])
+        {
+            return 0;
+        }
+        return &(blocks_[block_id][list_id]);
+    }
+
+    size_t mem()
+    {
+        size_t bytes =
+            sizeof(*this) +
+            blockspool_->mem() +
+            numblocks_ * sizeof(void *);
+
+        return bytes;
     }
 
 private:
-    MemoryChunk *chunks;
-    int numChunks;
-    int size;
-    int index;
-    int label;
-    bool ready = false;
+    cpool *blockspool_;
+    SIPPNode **blocks_;
+    int numblocks_;
+    int label_;
+    bool ready_ = false;
 
-    // find bucket id and allocate if does not exist.
-    SIPPNode *get_node_(int node_id)
-    {
+    // // find bucket id and allocate if does not exist.
+    // SIPPNode *get_node_(int node_id)
+    // {
 
-        int chunk_id = node_id / DEFAULT_CHUNK_SIZE;
-        int internal_id = node_id % DEFAULT_CHUNK_SIZE;
-        // std::cout << node_id << "," << chunk_id << "," << internal_id << endl;
+    //     int chunk_id = node_id / DEFAULT_CHUNK_SIZE;
+    //     int internal_id = node_id % DEFAULT_CHUNK_SIZE;
+    //     // std::cout << node_id << "," << chunk_id << "," << internal_id << endl;
 
-        if (chunk_id >= numChunks)
-        {
-            std::cout << "range out of memory pool size " << chunk_id << "," << index << "," << size << std::endl;
-            exit(1);
-        }
+    //     // if (chunk_id >= numChunks)
+    //     // {
+    //     //     std::cout << "range out of memory pool size " << chunk_id << "," << index << "," << size << std::endl;
+    //     //     exit(1);
+    //     // }
 
-        return chunks[chunk_id].get_node(internal_id);
-    }
+    //     return chunks[chunk_id].get_node(internal_id);
+    // }
 };
