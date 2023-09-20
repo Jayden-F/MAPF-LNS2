@@ -526,21 +526,5 @@ private:
     int numblocks_;
     int label_;
     bool ready_ = false;
-
-    // // find bucket id and allocate if does not exist.
-    // SIPPNode *get_node_(int node_id)
-    // {
-
-    //     int chunk_id = node_id / DEFAULT_CHUNK_SIZE;
-    //     int internal_id = node_id % DEFAULT_CHUNK_SIZE;
-    //     // std::cout << node_id << "," << chunk_id << "," << internal_id << endl;
-
-    //     // if (chunk_id >= numChunks)
-    //     // {
-    //     //     std::cout << "range out of memory pool size " << chunk_id << "," << index << "," << size << std::endl;
-    //     //     exit(1);
-    //     // }
-
-    //     return chunks[chunk_id].get_node(internal_id);
-    // }
+    
 };

@@ -155,7 +155,7 @@ Path SIPP::findPath(ReservationTable &reservation_table, MemoryPool &memory_pool
     // auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
     //                             get<2>(interval), get<2>(interval));
 
-    SIPPNode *start = memory_pool.generate_node(start_location + instance.map_size * min(depth_limit, get<1>(interval)), start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
+    SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, get<1>(interval)), start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
                                                 get<2>(interval), get<2>(interval));
 
     pushNodeToFocal(start);
@@ -216,7 +216,7 @@ Path SIPP::findPath(ReservationTable &reservation_table, MemoryPool &memory_pool
                 //                          next_high_generation, next_high_expansion, next_v_collision, next_collisions);
                 SIPPNode next(next_location, next_timestep, next_h_val, curr, next_timestep, next_high_generation, next_high_expansion, next_v_collision, next_collisions);
                 // try to retrieve it from the hash table
-                int node_id = next.location + instance.map_size * min(depth_limit, next_high_expansion);
+                int node_id = next.location * depth_limit + min(depth_limit, next_high_expansion);
                 if (dominanceCheck(node_id, &next, memory_pool))
                 {
                     SIPPNode *next_ptr = memory_pool.replace_node(node_id, next);
@@ -238,7 +238,7 @@ Path SIPP::findPath(ReservationTable &reservation_table, MemoryPool &memory_pool
                           get<1>(interval), get<1>(interval), get<2>(interval),
                           next_collisions);
             next.wait_at_goal = (curr->location == goal_location);
-            int node_id = next.location + instance.map_size * min(depth_limit, get<1>(interval));
+            int node_id = next.location * depth_limit + min(depth_limit, get<1>(interval));
             if (dominanceCheck(node_id, &next, memory_pool))
             {
                 SIPPNode *next_ptr = memory_pool.replace_node(node_id, next);
