@@ -2,7 +2,7 @@
 
 # Default concurrency for make
 if [ -z "$CONCURRENCY" ]; then
-    CONCURRENCY=$(sysctl -n hw.physicalcpu)
+    CONCURRENCY=$(nproc)
 fi
 
 PROGRAM="$0"
