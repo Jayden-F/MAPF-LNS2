@@ -46,6 +46,7 @@ bool LNS::run()
 {
     // only for statistic analysis, and thus is not included in runtime
     memory_pool.init(instance.map_size * (planning_horizon + 1));
+    sipp_intervals = SIPPIntervals(instance.map_size);
 
     sum_of_distances = 0;
     for (const auto &agent : agents)
@@ -423,13 +424,14 @@ bool LNS::runWinPP()
     assert(planning_period <= planning_horizon); // you must replan before the end of your planning horizon
 
     int planning_phases = 0;
+    int window_start = 0;
     int num_agents_at_goal = 0;
     int max_agents = (int)agents.size();
     auto *MT_S = new std::mt19937(0);
 
-    path_table.reset();
-    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
-    ReservationTable reservation_table(constraint_table, NO_AGENT);
+    // path_table.reset();
+    // ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
+    // ReservationTable reservation_table(constraint_table, NO_AGENT);
     std::vector<Path> accumulated_paths(max_agents);
 
     runtime = ((fsec)(Time::now() - start_time)).count();
@@ -450,18 +452,17 @@ bool LNS::runWinPP()
         auto p = shuffled_agents.begin();
         neighbor.sum_of_costs = 0;
 
-        constraint_table.clear();
-//        reservation_table.clear();
+        // constraint_table.clear();
+        //        reservation_table.clear();
 
         while (p != shuffled_agents.end())
         {
             int id = *p;
-            reservation_table.goal_location = agents[id].path_planner->goal_location;
+            // reservation_table.goal_location = agents[id].path_planner->goal_location;
 
             if (screen >= 3)
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                      << "Agent " << agents[id].id << endl;
-            agents[id].path = agents[id].path_planner->findPath(reservation_table, memory_pool, planning_horizon);
 
             if (agents[id].path.empty())
             {
@@ -469,7 +470,7 @@ bool LNS::runWinPP()
                 while (rp != p)
                 {
                     int r_id = *rp;
-                    path_table.deletePath(agents[r_id].id, agents[r_id].path, planning_horizon);
+                    sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, window_start, planning_horizon);
                     ++rp;
                 }
                 if (screen > 2)
@@ -479,19 +480,21 @@ bool LNS::runWinPP()
             // neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
             // if (neighbor.sum_of_costs >= neighbor.old_sum_of_costs) break;
 
-            path_table.insertPath(agents[id].id, agents[id].path, planning_horizon);
+            sipp_intervals.insert_path(agents[id].id, agents[id].path, planning_horizon);
             remaining_agents--;
             ++p;
         }
 
         // All Agents have a path to there goal
-        if (remaining_agents == 0) {
+        if (remaining_agents == 0)
+        {
             num_agents_at_goal = 0; // No agents are currently at their goal location
             // start = Time::now();
-            for (int id = 0; id < max_agents; id++) {
+            for (int id = 0; id < max_agents; id++)
+            {
                 // Resize vector to account for next window.
-                int max_length = min(planning_period, (int) agents[id].path.size()) - 1;
-                accumulated_paths[id].resize((int) accumulated_paths[id].size() + planning_period,
+                int max_length = min(planning_period, (int)agents[id].path.size()) - 1;
+                accumulated_paths[id].resize((int)accumulated_paths[id].size() + planning_period,
                                              agents[id].path[max_length]);
 
                 // Add new plan onto the end of previous plan
@@ -502,7 +505,8 @@ bool LNS::runWinPP()
                 // Move agent to next planning phase and check if at goal
                 agents[id].at_goal = false; //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
                 agents[id].path_planner->start_location = agents[id].path[max_length].location;
-                if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location) {
+                if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location)
+                {
                     agents[id].at_goal = true;
                     num_agents_at_goal++;
                 }
@@ -541,7 +545,7 @@ bool LNS::runWinPP()
 
         agents[id].path_planner->start_location = accumulated_paths[id].at(0).location;
         agents[id].path = accumulated_paths[id];
-        path_table.insertPath(agents[id].id, accumulated_paths[id]); // add total path
+        // sipp_intervals.insertPath(agents[id].id, accumulated_paths[id]); // add total path
     }
     for (int id = 0; id < max_agents; id++)
     {

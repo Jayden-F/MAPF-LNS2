@@ -435,10 +435,8 @@ public:
         return &(blocks_[block_id][list_id]);
     }
 
-    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, int high_generation, int high_expansion,
-                            bool collision_v, int num_of_conflicts)
+    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, SIPPInterval *interval)
     {
-
         // if (id >= numblocks_)
         // {
         //     std::cout << "range out of memory pool size " << id << "," << numblocks_ << std::endl;
@@ -461,10 +459,10 @@ public:
         node->h_val = h_val;
         node->parent = parent;
         node->timestep = timestep;
-        node->high_generation = high_generation;
-        node->high_expansion = high_expansion;
-        node->collision_v = collision_v;
-        node->num_of_conflicts = num_of_conflicts;
+        node->interval = interval;
+        // node->high_expansion = high_expansion;
+        // node->collision_v = collision_v;
+        // node->num_of_conflicts = num_of_conflicts;
 
         return node;
     }
@@ -480,10 +478,9 @@ public:
         node->h_val = new_node.h_val;
         node->parent = new_node.parent;
         node->timestep = new_node.timestep;
-        node->high_generation = new_node.high_generation;
-        node->high_expansion = new_node.high_expansion;
-        node->collision_v = new_node.collision_v;
-        node->num_of_conflicts = new_node.num_of_conflicts;
+        node->interval = new_node.interval;
+        // node->collision_v = new_node.collision_v;
+        // node->num_of_conflicts = new_node.num_of_conflicts;
         return node;
     }
 
@@ -526,5 +523,4 @@ private:
     int numblocks_;
     int label_;
     bool ready_ = false;
-    
 };
