@@ -258,6 +258,9 @@ SIPPIntervals::binary_search(int location, int low, int left) const
     int right(intervals_[location].size() - 1);
     int mid;
 
+    cout << "   binary_search: " << location << " @ [" << low << "," << low + 1 << ")" << endl;
+    this->validate_intervals(location);
+
     while (left <= right)
     {
         mid = (left + right) / 2;
