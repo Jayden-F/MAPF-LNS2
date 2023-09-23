@@ -319,5 +319,4 @@ void SIPPIntervals::validate_intervals(int location) const
         cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
         exit(1);
     }
-    cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "," << intervals_[location].back().agent_id << ")" << endl;
 }
