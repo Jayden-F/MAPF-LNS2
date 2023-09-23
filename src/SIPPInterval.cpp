@@ -60,7 +60,7 @@ void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int st
         return;
 
     int location = path[period].location;
-    // this->truncate_interval(agent_id, location, start + period);
+    this->truncate_interval(agent_id, location, start + period);
 
     for (int t = period + 1; t < path.size() && t <= horizon; t++)
     {
