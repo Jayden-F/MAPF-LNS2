@@ -127,16 +127,22 @@ void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
     {
         intervals_[location][index - 1].high = intervals_[location][index].high;
         intervals_[location].erase(intervals_[location].begin() + index);
+        this->validate_intervals(location);
+        return;
+    }
+
+    if (intervals_[location][index + 1].agent_id == NO_AGENT)
+    // Absorb following interval if it is safe
+    {
+        intervals_[location][index].agent_id = NO_AGENT;
+        intervals_[location][index].high = intervals_[location][index + 1].high;
+        intervals_[location].erase(intervals_[location].begin() + index + 1);
 
         this->validate_intervals(location);
         return;
     }
 
-    // Absorb following interval if it is safe
     intervals_[location][index].agent_id = NO_AGENT;
-    intervals_[location][index].high = intervals_[location][index + 1].high;
-    intervals_[location].erase(intervals_[location].begin() + index + 1);
-
     this->validate_intervals(location);
     return;
 }
