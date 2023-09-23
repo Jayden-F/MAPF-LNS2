@@ -297,6 +297,10 @@ void SIPPIntervals::validate_intervals(int location) const
     }
 
     for (int i = 0; i < intervals_[location].size() - 1; i++)
+        cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "," << intervals_[location][i].agent_id << "), ";
+    cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "," << intervals_[location].back().agent_id << ")" << endl;
+
+    for (int i = 0; i < intervals_[location].size() - 1; i++)
     {
         if (intervals_[location][i].agent_id == intervals_[location][i + 1].agent_id)
         {
@@ -308,7 +312,6 @@ void SIPPIntervals::validate_intervals(int location) const
             cerr << "ERROR: interval " << i << " and " << i + 1 << " overlap" << endl;
             exit(1);
         }
-        cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "," << intervals_[location][i].agent_id << "), ";
     }
 
     if (intervals_[location].back().high != MAX_TIMESTEP)
