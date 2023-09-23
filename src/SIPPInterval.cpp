@@ -290,14 +290,31 @@ void SIPPIntervals::validate_intervals(int location) const
     cout << "   location: " << location << endl
          << "   ";
 
-    assert(intervals_[location][0].low == 0);
+    if (intervals_[location][0].low != 0)
+    {
+        cerr << "ERROR: interval does not start at 0" << endl;
+        exit(1);
+    }
+
     for (int i = 0; i < intervals_[location].size() - 1; i++)
     {
-        assert(intervals_[location][i].agent_id != intervals_[location][i + 1].agent_id);
-        assert(intervals_[location][i].high <= intervals_[location][i + 1].low);
+        if (intervals_[location][i].agent_id == intervals_[location][i + 1].agent_id)
+        {
+            cerr << "ERROR: interval " << i << " and " << i + 1 << " have the same agent_id" << endl;
+            exit(1);
+        }
+        if (intervals_[location][i].high > intervals_[location][i + 1].low)
+        {
+            cerr << "ERROR: interval " << i << " and " << i + 1 << " overlap" << endl;
+            exit(1);
+        }
         cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "," << intervals_[location][i].agent_id << "), ";
     }
 
-    assert(intervals_[location].back().high == MAX_TIMESTEP);
+    if (intervals_[location].back().high != MAX_TIMESTEP)
+    {
+        cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
+        exit(1);
+    }
     cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "," << intervals_[location].back().agent_id << ")" << endl;
 }
