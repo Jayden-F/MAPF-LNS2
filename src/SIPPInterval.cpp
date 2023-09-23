@@ -112,10 +112,21 @@ void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
 
     // Remove interval entirely
     if (index >= 1 &&
-        intervals_[location][index - 1].agent_id == NO_AGENT)
+        intervals_[location][index - 1].agent_id == NO_AGENT &&
+        intervals_[location][index + 1].agent_id == NO_AGENT)
     {
         intervals_[location][index - 1].high = intervals_[location][index + 1].high;
         intervals_[location].erase(intervals_[location].begin() + index, intervals_[location].begin() + index + 2);
+
+        this->validate_intervals(location);
+        return;
+    }
+
+    if (index >= 1 &&
+        intervals_[location][index - 1].agent_id == NO_AGENT)
+    {
+        intervals_[location][index - 1].high = intervals_[location][index].high;
+        intervals_[location].erase(intervals_[location].begin() + index);
 
         this->validate_intervals(location);
         return;
