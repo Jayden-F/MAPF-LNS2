@@ -32,7 +32,7 @@ private:
     string replan_algo_name;
     init_destroy_heuristic init_destroy_strategy = COLLISION_BASED;
 
-    // PathTableWC path_table; // 1. stores the paths of all agents in a time-space table;
+    PathTableWC path_table; // 1. stores the paths of all agents in a time-space table;
     // 2. avoid making copies of this variable as much as possible.
 
     vector<set<int>> collision_graph;

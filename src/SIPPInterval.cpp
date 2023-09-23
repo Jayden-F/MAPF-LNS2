@@ -3,75 +3,153 @@
 
 #define NO_AGENT -1
 
-SIPPInterval *SIPPIntervals::get_first_interval(int location, int start_time = 0)
+const SIPPInterval *SIPPIntervals::get_first_interval(int agent_id, int location, int start_time)
 {
     if (intervals_[location].empty())
     {
-        SIPPIntervals::init_location(location);
+        this->init_location(location);
     }
 
-    int index = SIPPIntervals::binary_search(location, start_time);
+    int index = this->binary_search(location, start_time);
     if (index == -1)
+        return nullptr;
+
+    if (intervals_[location][index].agent_id != NO_AGENT)
         return nullptr;
 
     return &intervals_[location][index];
 }
 
-vector<SIPPInterval *> SIPPIntervals::get_intervals(int from, SIPPInterval *current_interval, int to)
+vector<const SIPPInterval *> SIPPIntervals::get_intervals(int from, int to, int low, int high)
 {
     if (intervals_[to].empty())
     {
-        SIPPIntervals::init_location(to);
+        this->init_location(to);
     }
 
-    return SIPPIntervals::find_intervals(from, current_interval, to);
+    return this->find_intervals(from, to, low, high);
 }
 
-void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start = 0, int length = INFINITY)
+void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start, int length)
 {
     if (path.empty())
         return;
 
-    PathEntry *location = &path[start];
-    int low(0);
-    int high(0);
+    int location = path.front().location;
+    int low(start);
+    int high(start);
 
-    for (int t = start; t < path.size() && t < start + length; t++)
+    for (int t = 0; t < path.size() && t <= length; t++)
     {
-        if (location->location != path[t].location)
+        if (location != path[t].location)
         {
-            split(agent_id, location->location, low, high);
-            low = t;
-            location = &path[t];
+            cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+            this->split(agent_id, location, low, high);
+            low = high;
+            location = path[t].location;
         }
-        else
-            high = t;
+        high++;
+    }
+    cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+    this->split(agent_id, location, low, high);
+}
+
+void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period, int horizon)
+{
+    if (period == horizon)
+        return;
+
+    int location = path[period].location;
+    this->truncate_interval(agent_id, location, start + period);
+
+    for (int t = period + 1; t < path.size() && t <= horizon; t++)
+    {
+        if (location != path[t].location)
+        {
+            cout << agent_id << " merging: " << path[t].location << " @@ [" << start + t << "," << start + t + 1 << ")" << endl;
+            this->merge(path[t].location, start + t);
+            location = path[t].location;
+        }
     }
 }
 
-void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int length = INFINITY)
+void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start, int length)
 {
-    PathEntry *location = nullptr;
+    int location = path[0].location;
+    this->truncate_interval(agent_id, location, start);
+
     // loop over each location in the path use binary search to find the interval and use merge to remove it.
-    for (int t = start; t < path.size() && t < start + length; t++)
+    for (int t = 1; t < path.size() && t < length; t++)
     {
-        if (location->location != path[t].location)
+        if (location != path[t].location)
         {
-            location = &path[t];
-            merge(location->location, t);
+            cout << agent_id << " merging: " << path[t].location << " at [" << start + t << "," << start + t + 1 << ")" << endl;
+            this->merge(path[t].location, start + t);
+            location = path[t].location;
         }
     }
+}
+
+void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
+{
+
+    cout << agent_id << " truncating: " << location << " @ [" << timestep << "," << timestep + 1 << ")" << endl;
+    this->validate_intervals(location);
+
+    int index = this->binary_search(location, timestep);
+
+    int length = intervals_[location][index].high - intervals_[location][index].low;
+
+    // Shorten Interval
+    if (length > 1)
+    {
+        intervals_[location][index + 1].low = timestep;
+        intervals_[location][index].high = timestep;
+
+        this->validate_intervals(location);
+        return;
+    }
+
+    // Remove interval entirely
+    if (index >= 1 &&
+        intervals_[location][index - 1].agent_id == NO_AGENT)
+    {
+        intervals_[location][index - 1].high = intervals_[location][index + 1].high;
+        intervals_[location].erase(intervals_[location].begin() + index, intervals_[location].begin() + index + 2);
+
+        this->validate_intervals(location);
+        return;
+    }
+
+    // Absorb following interval if it is safe
+    intervals_[location][index].agent_id = NO_AGENT;
+    intervals_[location][index].high = intervals_[location][index + 1].high;
+    intervals_[location].erase(intervals_[location].begin() + index + 1);
+
+    this->validate_intervals(location);
+    return;
 }
 
 void SIPPIntervals::split(int agent_id, int location, int low, int high)
 {
-    int interval_index = SIPPIntervals::binary_search(location, low);
+
+    if (intervals_[location].empty())
+    {
+        this->init_location(location);
+    }
+
+    this->validate_intervals(location);
+
+    int interval_index = this->binary_search(location, low);
+    assert(intervals_[location][interval_index].agent_id == NO_AGENT);
 
     // Proposed interval matches current interval
     if (intervals_[location][interval_index].high == high &&
         intervals_[location][interval_index].low == low)
     {
         intervals_[location][interval_index].agent_id = agent_id;
+
+        this->validate_intervals(location);
         return;
     }
 
@@ -79,7 +157,21 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     if (intervals_[location][interval_index].high == high)
     {
         intervals_[location][interval_index].high = low;
-        intervals_[location].insert(intervals_[location].begin() + interval_index, SIPPInterval(low, high, agent_id));
+        intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
+
+        this->validate_intervals(location);
+        return;
+    }
+
+    // Extend your previous interval
+    if (interval_index > 0 &&
+        intervals_[location][interval_index].low == low &&
+        intervals_[location][interval_index - 1].agent_id == agent_id)
+    {
+        intervals_[location][interval_index - 1].high = high;
+        intervals_[location][interval_index].low = high;
+
+        this->validate_intervals(location);
         return;
     }
 
@@ -87,20 +179,30 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     if (intervals_[location][interval_index].low == low)
     {
         intervals_[location][interval_index].low = high;
-        intervals_[location].insert(intervals_[location].begin() + interval_index - 1, SIPPInterval(low, high, agent_id));
+        intervals_[location].emplace(intervals_[location].begin() + interval_index, low, high, agent_id);
+
+        this->validate_intervals(location);
         return;
     }
 
     // interval is contained within current interval
     int new_high = intervals_[location][interval_index].high;
     intervals_[location][interval_index].high = low;
-    intervals_[location].insert(intervals_[location].begin() + interval_index, SIPPInterval(low, high, agent_id));
-    intervals_[location].insert(intervals_[location].begin() + interval_index + 1, SIPPInterval(high, new_high, NO_AGENT));
+    intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, high, new_high, NO_AGENT);
+    intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
+
+    this->validate_intervals(location);
+    return;
 }
 
 void SIPPIntervals::merge(int location, int low)
 {
+    this->validate_intervals(location);
+
+    assert(!intervals_[location].empty());
     int index = SIPPIntervals::binary_search(location, low);
+    if (intervals_[location][index].agent_id == NO_AGENT)
+        return;
 
     // Two Neighbouring Safe Intervals
     if (index > 0 &&
@@ -109,7 +211,9 @@ void SIPPIntervals::merge(int location, int low)
         intervals_[location][index + 1].agent_id == NO_AGENT)
     {
         intervals_[location][index - 1].high = intervals_[location][index + 1].high;
-        intervals_[location].erase(intervals_[location].begin() + index, intervals_[location].begin() + index + 1);
+        intervals_[location].erase(intervals_[location].begin() + index, intervals_[location].begin() + index + 2);
+
+        this->validate_intervals(location);
         return;
     }
 
@@ -123,10 +227,11 @@ void SIPPIntervals::merge(int location, int low)
     // Late
     if (index < intervals_[location].size() - 1 &&
         intervals_[location][index + 1].agent_id == NO_AGENT)
-        intervals_[location][index].low = low;
+        intervals_[location][index + 1].low = intervals_[location][index].low;
 
     intervals_[location].erase(intervals_[location].begin() + index);
 
+    this->validate_intervals(location);
     return;
 }
 
@@ -139,24 +244,29 @@ SIPPIntervals::binary_search(int location, int low, int left) const
     while (left <= right)
     {
         mid = (left + right) / 2;
-        if (intervals_[location][mid].high < low)
+        if (intervals_[location][mid].high <= low)
             left = mid + 1;
         else if (intervals_[location][mid].low > low)
             right = mid - 1;
         else
+        {
+            assert(intervals_[location][mid].low <= low && intervals_[location][mid].high > low);
             return mid;
+        }
     }
 
-    // cerr << "ERROR: binary_search failed to find interval" << endl;
+    cerr << "ERROR: binary_search failed to find interval" << endl;
     return -1;
 }
 
-vector<SIPPInterval *> SIPPIntervals::find_intervals(int from, SIPPInterval *current_interval, int to) const
+vector<const SIPPInterval *> SIPPIntervals::find_intervals(int from, int to, int low, int high) const
 {
     //  Otherwise search for interval between low and high
-    int low_index = SIPPIntervals::binary_search(to, current_interval->low);
-    int high_index = SIPPIntervals::binary_search(to, current_interval->high - 1, low_index);
-    vector<SIPPInterval *> result(high_index - low_index + 1);
+    int next_index = this->binary_search(from, low - 1) + 1;
+    int low_index = this->binary_search(to, low);
+    int high_index = this->binary_search(to, high - 1);
+    vector<const SIPPInterval *> result;
+    result.reserve(high_index - low_index + 1);
 
     for (int i = low_index; i <= high_index; i++)
     {
@@ -166,11 +276,28 @@ vector<SIPPInterval *> SIPPIntervals::find_intervals(int from, SIPPInterval *cur
 
         // Edge Conflict
         if (i - 1 > 0 &&
-            current_interval + 1 > &intervals_[from][0] &&
-            intervals_[to][i - 1].agent_id == (current_interval + 1)->agent_id)
+            next_index < (int)intervals_[from].size() &&
+            intervals_[to][i - 1].agent_id == intervals_[from][next_index].agent_id)
             continue;
 
-        result.push_back(current_interval + 1);
+        result.push_back(&intervals_[to][i]);
     }
     return result;
+}
+
+void SIPPIntervals::validate_intervals(int location) const
+{
+    cout << "   location: " << location << endl
+         << "   ";
+
+    assert(intervals_[location][0].low == 0);
+    for (int i = 0; i < intervals_[location].size() - 1; i++)
+    {
+        assert(intervals_[location][i].agent_id != intervals_[location][i + 1].agent_id);
+        assert(intervals_[location][i].high <= intervals_[location][i + 1].low);
+        cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "," << intervals_[location][i].agent_id << "), ";
+    }
+
+    assert(intervals_[location].back().high == MAX_TIMESTEP);
+    cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "," << intervals_[location].back().agent_id << ")" << endl;
 }

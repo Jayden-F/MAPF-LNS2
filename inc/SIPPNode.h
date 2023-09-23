@@ -11,14 +11,18 @@ public:
 	typedef boost::heap::pairing_heap<SIPPNode *, compare<SIPPNode::secondary_compare_node>>::handle_type focal_handle_t;
 	open_handle_t open_handle;
 	focal_handle_t focal_handle;
-	// int high_generation; // the upper bound with respect to generation
-	// int high_expansion;	 // the upper bound with respect to expansion
-	SIPPInterval *interval;
-	// int interval_index;
+	int high_generation; // the upper bound with respect to generation
+	int high_expansion;	 // the upper bound with respect to expansion
+	const SIPPInterval *interval;
+	bool collision_v;
 
 	SIPPNode() : LLNode() {}
 	SIPPNode(int id) : LLNode(id) {}
-	SIPPNode(int loc, int g_val, int h_val, SIPPNode *parent, int timestep, SIPPInterval *interval) : LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), interval(interval) {}
+	SIPPNode(int loc, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval) : LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), interval(interval) {}
+	SIPPNode(int loc, int g_val, int h_val, SIPPNode *parent, int timestep, int high_generation, int high_expansion,
+			 bool collision_v, int num_of_conflicts) : LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), high_generation(high_generation),
+													   high_expansion(high_expansion), collision_v(collision_v) {}
+
 	// SIPPNode(const SIPPNode& other): LLNode(other), high_generation(other.high_generation), high_expansion(other.high_expansion),
 	//                              collision_v(other.collision_v) {}
 	~SIPPNode() {}

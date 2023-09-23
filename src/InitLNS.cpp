@@ -1,8 +1,8 @@
 #include "InitLNS.h"
 #include <queue>
 #include <algorithm>
-// #include "GCBS.h"
-// #include "PBS.h"
+#include "GCBS.h"
+#include "PBS.h"
 
 InitLNS::InitLNS(const Instance &instance, vector<Agent> &agents, double time_limit,
                  const string &replan_algo_name, const string &init_destory_name, int neighbor_size, int screen) : BasicLNS(instance, time_limit, neighbor_size, screen), agents(agents), replan_algo_name(replan_algo_name),
@@ -375,7 +375,7 @@ bool InitLNS::getInitialSolution()
     }
     int remaining_agents = (int)neighbor.agents.size();
     std::random_shuffle(neighbor.agents.begin(), neighbor.agents.end());
-    // ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, nullptr, &path_table);
+    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, nullptr, &path_table);
     set<pair<int, int>> colliding_pairs;
     for (auto id : neighbor.agents)
     {

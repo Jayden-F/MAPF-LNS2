@@ -435,7 +435,7 @@ public:
         return &(blocks_[block_id][list_id]);
     }
 
-    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, SIPPInterval *interval)
+    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval)
     {
         // if (id >= numblocks_)
         // {
