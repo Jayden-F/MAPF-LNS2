@@ -239,15 +239,25 @@ void SIPPIntervals::merge(int location, int low)
     // Early
     if (index > 0 &&
         intervals_[location][index - 1].agent_id == NO_AGENT)
+    {
         intervals_[location][index - 1].high = intervals_[location][index].high;
+        intervals_[location].erase(intervals_[location].begin() + index);
+        this->validate_intervals(location);
+        return;
+    }
 
     // Late
     if (index < intervals_[location].size() - 1 &&
         intervals_[location][index + 1].agent_id == NO_AGENT)
+    {
         intervals_[location][index + 1].low = intervals_[location][index].low;
+        intervals_[location].erase(intervals_[location].begin() + index);
+        this->validate_intervals(location);
+        return;
+    }
 
-    intervals_[location].erase(intervals_[location].begin() + index);
-
+    // No Neighbouring Safe Intervals
+    intervals_[location][index].agent_id = NO_AGENT;
     this->validate_intervals(location);
     return;
 }
