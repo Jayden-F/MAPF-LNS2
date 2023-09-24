@@ -66,7 +66,7 @@ void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int st
     {
         if (location != path[t].location)
         {
-            cout << agent_id << " merging: " << path[t].location << " @@ [" << start + t << "," << start + t + 1 << ")" << endl;
+            cout << agent_id << " merging: " << path[t].location << " @ [" << start + t << "," << start + t + 1 << ")" << endl;
             this->merge(path[t].location, start + t);
             location = path[t].location;
         }
@@ -83,7 +83,7 @@ void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start
     {
         if (location != path[t].location)
         {
-            cout << agent_id << " merging: " << path[t].location << " at [" << start + t << "," << start + t + 1 << ")" << endl;
+            cout << agent_id << " merging: " << path[t].location << " @ [" << start + t << "," << start + t + 1 << ")" << endl;
             this->merge(path[t].location, start + t);
             location = path[t].location;
         }
@@ -217,7 +217,7 @@ void SIPPIntervals::merge(int location, int low)
     this->validate_intervals(location);
 
     assert(!intervals_[location].empty());
-    int index = SIPPIntervals::binary_search(location, low);
+    int index = this->binary_search(location, low);
     if (intervals_[location][index].agent_id == NO_AGENT)
         return;
 
