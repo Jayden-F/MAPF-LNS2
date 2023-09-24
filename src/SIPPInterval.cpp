@@ -54,15 +54,15 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     this->split(agent_id, location, low, high);
 }
 
-void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period, int horizon)
+void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period)
 {
     if (period == horizon)
         return;
 
     int location = path[period].location;
     this->truncate_interval(agent_id, location, start + period);
-    int t;
-    for (t = period + 1; t < path.size() && t <= horizon; t++)
+
+    for (int t = period + 1; t < path.size(); t++)
     {
         if (location != path[t].location)
         {
@@ -71,17 +71,15 @@ void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int st
             location = path[t].location;
         }
     }
-    this->merge(path[t].location, start + t);
 }
 
-void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start, int length)
+void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start)
 {
     int location = path[0].location;
     this->truncate_interval(agent_id, location, start);
 
     // loop over each location in the path use binary search to find the interval and use merge to remove it.
-    int t;
-    for (t = 1; t < path.size() && t <= length; t++)
+    for (int t = 1; t < path.size(); t++)
     {
         if (location != path[t].location)
         {
@@ -90,7 +88,6 @@ void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start
             location = path[t].location;
         }
     }
-    this->merge(path[t].location, start + t);
 }
 
 void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
