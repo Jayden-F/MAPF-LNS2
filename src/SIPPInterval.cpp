@@ -39,7 +39,7 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     int low(start);
     int high(start);
 
-    cout << path << endl;
+    // cout << path << endl;
 
     for (int t = 0; t < path.size(); t++)
     {
