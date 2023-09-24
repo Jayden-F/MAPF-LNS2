@@ -20,7 +20,7 @@ public:
 
     const SIPPInterval *get_first_interval(int agent_id, int location, int start_time = 0);
     vector<const SIPPInterval *> get_intervals(int from, int to, int low, int high);
-    void insert_path(int agent_id, vector<PathEntry> &path, int start = 0, int length = MAX_TIMESTEP);
+    void insert_path(int agent_id, vector<PathEntry> &path, int start = 0);
     void remove_path(int agent_id, vector<PathEntry> &path, int start = 0);
     void remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period);
     void truncate_interval(int agent_id, int location, int timestep);
