@@ -4,6 +4,7 @@
 #include "ReservationTable.h"
 #include "MemoryPool.h"
 #include "LLNode.h"
+#include "common.h"
 
 class SingleAgentSolver
 {
@@ -33,13 +34,13 @@ public:
 								 const vector<Path *> &paths, int agent, int lower_bound) = 0;
 	virtual pair<Path, int> findSuboptimalPath(const HLNode &node, const ConstraintTable &initial_constraints,
 											   const vector<Path *> &paths, int agent, int lowerbound, double w) = 0; // return the path and the lowerbound
-	virtual Path findPath(const ConstraintTable &constraint_table, int planning_window_length = INFINITY) = 0;		  // return the path
-	virtual Path findPath(ReservationTable &constraint_table, MemoryPool &memory_pool, int planning_window_length = INFINITY)
+	virtual Path findPath(const ConstraintTable &constraint_table, int planning_window_length = MAX_TIMESTEP) = 0;	  // return the path
+	virtual Path findPath(ReservationTable &constraint_table, MemoryPool &memory_pool, int planning_window_length = MAX_TIMESTEP)
 	{
 		Path path;
 		return path;
 	} // return the path
-	virtual Path findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start = 0, int depth_limit = INFINITY)
+	virtual Path findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start = 0, int depth_limit = MAX_TIMESTEP)
 	{
 		Path path;
 		return path;
