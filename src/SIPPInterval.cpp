@@ -39,6 +39,8 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     int low(start);
     int high(start);
 
+    cout << path << endl;
+
     for (int t = 0; t < path.size(); t++)
     {
         if (location != path[t].location)
@@ -50,6 +52,8 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
         }
         high++;
     }
+    cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+    this->split(agent_id, location, low, high);
 }
 
 void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period)
