@@ -28,7 +28,11 @@ public:
 private:
     vector<vector<SIPPInterval>> intervals_;
 
-    void init_location(int location) { intervals_[location].push_back(SIPPInterval()); }
+    void init_location(int location)
+    {
+        intervals_[location].reserve(MAX_TIMESTEP / 1000);
+        intervals_[location].emplace_back(0, MAX_TIMESTEP);
+    }
     void split(int agent_id, int location, int low, int high);
     void merge(int location, int low);
 
