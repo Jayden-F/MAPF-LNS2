@@ -327,8 +327,8 @@ void SIPPIntervals::validate_intervals(int location) const
     }
 
     for (int i = 0; i < intervals_[location].size() - 1; i++)
-        cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "," << intervals_[location][i].agent_id << "), ";
-    cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "," << intervals_[location].back().agent_id << ")" << endl;
+        cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "): " << intervals_[location][i].agent_id << " , ";
+    cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "): " << intervals_[location].back().agent_id << " " << endl;
 
     for (int i = 0; i < intervals_[location].size() - 1; i++)
     {
