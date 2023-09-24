@@ -230,8 +230,8 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
         return;
     }
 
-    cerr << "ERROR: split failed to find interval" << endl;
-    cerr << "Proposed Interval: [" << low << "," << high << ")" << endl;
+    cerr << "ERROR: split failed " << endl;
+    cerr << "Proposed Interval: [" << low << "," << high << "):" << agent_id << endl;
     this->validate_intervals(location);
 
     exit(1);
