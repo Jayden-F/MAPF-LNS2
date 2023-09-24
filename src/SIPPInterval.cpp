@@ -217,14 +217,24 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
         return;
     }
 
-    // Interval is contained within current interval
-    int new_high = intervals_[location][interval_index].high;
-    intervals_[location][interval_index].high = low;
-    intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, high, new_high, NO_AGENT);
-    intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
+    // interval is contained within current interval
+    if (intervals_[location][interval_index].low < low &&
+        intervals_[location][interval_index].high > high)
+    {
+        int new_high = intervals_[location][interval_index].high;
+        intervals_[location][interval_index].high = low;
+        intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, high, new_high, NO_AGENT);
+        intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
 
-    // this->validate_intervals(location);
-    return;
+        // this->validate_intervals(location);
+        return;
+    }
+
+    cerr << "ERROR: split failed to find interval" << endl;
+    cerr << "Proposed Interval: [" << low << "," << high << ")" << endl;
+    this->validate_intervals(location);
+
+    exit(1);
 }
 
 void SIPPIntervals::merge(int location, int low)
