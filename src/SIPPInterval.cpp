@@ -160,6 +160,34 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     int interval_index = this->binary_search(location, low);
     assert(intervals_[location][interval_index].agent_id == NO_AGENT);
 
+    // Merge with previous interval removing current interval
+    // [1246,1250): 83, [1250,1251): -1 , [1251,1252): 12
+    // [1246,1251): 83, [1251,1252): 12
+    if (interval_index > 0 &&
+        intervals_[location][interval_index].low == low &&
+        intervals_[location][interval_index - 1].agent_id == agent_id &&
+        intervals_[location][interval_index].high - intervals_[location][interval_index].low == 1)
+    {
+        intervals_[location][interval_index - 1].high = high;
+        intervals_[location].erase(intervals_[location].begin() + interval_index);
+        this->validate_intervals(location);
+        return;
+    }
+
+    // Merge with previous interval truncating current interval.
+    // [1246,1250): 83, [1250,1255): -1 , [1255,1252): 12
+    // [1246,1251): 83, [1251,1255): -1 , [1255,1252): 12
+    if (interval_index > 0 &&
+        intervals_[location][interval_index].low == low &&
+        intervals_[location][interval_index - 1].agent_id == agent_id)
+    {
+        intervals_[location][interval_index - 1].high = high;
+        intervals_[location][interval_index].low = high;
+
+        this->validate_intervals(location);
+        return;
+    }
+
     // Proposed interval matches current interval
     if (intervals_[location][interval_index].high == high &&
         intervals_[location][interval_index].low == low)
@@ -175,18 +203,6 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     {
         intervals_[location][interval_index].high = low;
         intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
-
-        this->validate_intervals(location);
-        return;
-    }
-
-    // Extend your previous interval
-    if (interval_index > 0 &&
-        intervals_[location][interval_index].low == low &&
-        intervals_[location][interval_index - 1].agent_id == agent_id)
-    {
-        intervals_[location][interval_index - 1].high = high;
-        intervals_[location][interval_index].low = high;
 
         this->validate_intervals(location);
         return;
