@@ -56,9 +56,6 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
 
 void SIPPIntervals::remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period)
 {
-    if (period == horizon)
-        return;
-
     int location = path[period].location;
     this->truncate_interval(agent_id, location, start + period);
 
