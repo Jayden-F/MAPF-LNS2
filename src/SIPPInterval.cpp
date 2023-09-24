@@ -89,7 +89,7 @@ void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
 {
 
     // cout << agent_id << " truncating: " << location << " @ [" << timestep << "," << timestep + 1 << ")" << endl;
-    this->validate_intervals(location);
+    // this->validate_intervals(location);
 
     int index = this->binary_search(location, timestep);
 
@@ -225,7 +225,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
 
 void SIPPIntervals::merge(int location, int low)
 {
-    this->validate_intervals(location);
+    // this->validate_intervals(location);
 
     assert(!intervals_[location].empty());
     int index = this->binary_search(location, low);
