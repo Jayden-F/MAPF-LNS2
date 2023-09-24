@@ -39,20 +39,20 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     int low(start);
     int high(start);
 
-    // cout << path << endl;
+    cout << path << endl;
 
     for (int t = 0; t < path.size(); t++)
     {
         if (location != path[t].location)
         {
-            // cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+            cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
             this->split(agent_id, location, low, high);
             low = high;
             location = path[t].location;
         }
         high++;
     }
-    // cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+    cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
     this->split(agent_id, location, low, high);
 }
 
@@ -154,7 +154,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
         this->init_location(location);
     }
 
-    // this->validate_intervals(location);
+    this->validate_intervals(location);
 
     int interval_index = this->binary_search(location, low);
     assert(intervals_[location][interval_index].agent_id == NO_AGENT);
