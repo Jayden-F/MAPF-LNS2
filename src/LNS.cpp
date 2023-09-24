@@ -456,6 +456,7 @@ bool LNS::runWinPP()
         // constraint_table.clear();
         //        reservation_table.clear();
 
+        // sipp_intervals.cleared_intervals(current_timestep);
         while (p != shuffled_agents.end())
         {
             int id = *p;

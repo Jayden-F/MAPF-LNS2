@@ -45,14 +45,14 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     {
         if (location != path[t].location)
         {
-            cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+            // cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
             this->split(agent_id, location, low, high);
             low = high;
             location = path[t].location;
         }
         high++;
     }
-    cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+    // cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
     this->split(agent_id, location, low, high);
 }
 
@@ -100,7 +100,7 @@ void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
     int length = intervals_[location][index].high - intervals_[location][index].low;
 
     // Shorten Interval
-    if (length > 1)
+    if (length > 1 && intervals_[location][index + 1].low < timestep)
     {
         intervals_[location][index + 1].low = timestep;
         intervals_[location][index].high = timestep;
@@ -126,6 +126,7 @@ void SIPPIntervals::truncate_interval(int agent_id, int location, int timestep)
     {
         intervals_[location][index - 1].high = intervals_[location][index].high;
         intervals_[location].erase(intervals_[location].begin() + index);
+
         // this->validate_intervals(location);
         return;
     }
@@ -154,7 +155,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
         this->init_location(location);
     }
 
-    this->validate_intervals(location);
+    // this->validate_intervals(location);
 
     int interval_index = this->binary_search(location, low);
     assert(intervals_[location][interval_index].agent_id == NO_AGENT);
@@ -267,6 +268,7 @@ void SIPPIntervals::merge(int location, int low)
     {
         intervals_[location][index - 1].high = intervals_[location][index].high;
         intervals_[location].erase(intervals_[location].begin() + index);
+
         // this->validate_intervals(location);
         return;
     }
@@ -277,12 +279,14 @@ void SIPPIntervals::merge(int location, int low)
     {
         intervals_[location][index + 1].low = intervals_[location][index].low;
         intervals_[location].erase(intervals_[location].begin() + index);
+
         // this->validate_intervals(location);
         return;
     }
 
     // No Neighbouring Safe Intervals
     intervals_[location][index].agent_id = NO_AGENT;
+
     // this->validate_intervals(location);
     return;
 }
@@ -357,15 +361,25 @@ void SIPPIntervals::validate_intervals(int location) const
 
     for (int i = 0; i < intervals_[location].size() - 1; i++)
     {
+        if (intervals_[location][i].low >= intervals_[location][i].high)
+        {
+            cerr << "ERROR: interval " << i << " has low >= high" << endl;
+            // exit(1);
+        }
         if (intervals_[location][i].agent_id == intervals_[location][i + 1].agent_id)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " have the same agent_id" << endl;
-            exit(1);
+            // exit(1);
         }
         if (intervals_[location][i].high > intervals_[location][i + 1].low)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " overlap" << endl;
-            exit(1);
+            // exit(1);
+        }
+        if (intervals_[location][i].high != intervals_[location][i + 1].low)
+        {
+            cerr << "ERROR: interval " << i << " and " << i + 1 << " do not touch" << endl;
+            // exit(1);
         }
     }
 

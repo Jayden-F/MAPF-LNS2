@@ -196,7 +196,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
         num_expanded++;
         assert(curr->location >= 0);
         // check if the popped node is a goal
-        if (curr->location == goal_location && curr->interval->high >= start_timestep + depth_limit)
+        if (curr->location == goal_location && curr->interval->high > start_timestep + depth_limit)
         {
             updatePath(curr, path, start_timestep);
             path.resize(depth_limit + 1, path.back());

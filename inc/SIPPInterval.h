@@ -1,6 +1,8 @@
 #pragma once
 #include "common.h"
 
+#define NO_AGENT -1
+
 struct SIPPInterval
 {
     int low;
@@ -25,12 +27,28 @@ public:
     void remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period);
     void truncate_interval(int agent_id, int location, int timestep);
 
+    // Make sure their are not invtervals beyond current_timestep
+    void cleared_intervals(int current_timestep) const
+    {
+        for (auto &location : intervals_)
+        {
+            for (auto &interval : location)
+            {
+                if (interval.low >= current_timestep && interval.agent_id != NO_AGENT)
+                {
+                    cerr << "Error: interval " << interval.low << " " << interval.high << " " << interval.agent_id << " is beyond current_timestep " << current_timestep << endl;
+                    // exit(1);
+                }
+            }
+        }
+    }
+
 private:
     vector<vector<SIPPInterval>> intervals_;
 
     void init_location(int location)
     {
-        intervals_[location].reserve(MAX_TIMESTEP / 1000);
+        // intervals_[location].reserve(10000);
         intervals_[location].emplace_back(0, MAX_TIMESTEP);
     }
     void split(int agent_id, int location, int low, int high);
