@@ -14,11 +14,12 @@ public:
 	int high_generation; // the upper bound with respect to generation
 	int high_expansion;	 // the upper bound with respect to expansion
 	const SIPPInterval *interval;
+	int interval_index;
 	bool collision_v;
 
 	SIPPNode() : LLNode() {}
 	SIPPNode(int id) : LLNode(id) {}
-	SIPPNode(int loc, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval) : LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), interval(interval) {}
+	SIPPNode(int loc, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval, int interval_index) : LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), interval(interval), interval_index(interval_index) {}
 	SIPPNode(int loc, int g_val, int h_val, SIPPNode *parent, int timestep, int high_generation, int high_expansion,
 			 bool collision_v, int num_of_conflicts) : LLNode(loc, g_val, h_val, parent, timestep, num_of_conflicts), high_generation(high_generation),
 													   high_expansion(high_expansion), collision_v(collision_v) {}
@@ -34,13 +35,14 @@ public:
 		// high_generation = other.high_generation;
 		// high_expansion = other.high_expansion;
 		interval = other.interval;
-		// int interval_index = other.interval_index;
+		interval_index = other.interval_index;
 		// collision_v = other.collision_v;
 	}
 	void reset()
 	{
 		LLNode::reset();
 		interval = nullptr;
+		interval_index = -1;
 		// collision_v = 0;
 	}
 	// The following is used by for generating the hash value of a nodes

@@ -54,6 +54,8 @@ void SIPP::updatePath(const LLNode *goal, vector<PathEntry> &path, int start_tim
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
 Path SIPP::findPath(const ConstraintTable &constraint_table, int depth_limit)
 {
+    Path path;
+    return path;
 }
 // {
 //     reset();
@@ -118,7 +120,7 @@ Path SIPP::findPath(const ConstraintTable &constraint_table, int depth_limit)
 //                 tie(next_high_generation, next_timestep, next_high_expansion, next_v_collision, next_e_collision) = i;
 //                 if (next_timestep + my_heuristic[next_location] > constraint_table.length_max)
 //                     break;
-//                 auto next_collisions = curr->num_of_conflicts +
+//                 auto next_collisions = curr->num_of_conflicexit(-1);ts +
 //                                        // (int)curr->collision_v * max(next_timestep - curr->timestep - 1, 0) + // wait time
 //                                        (int)next_v_collision + (int)next_e_collision;
 //                 auto next_h_val = max(my_heuristic[next_location], (next_collisions > 0 ? holding_time : curr->getFVal()) - next_timestep); // path max
@@ -172,9 +174,11 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
     //     return path;
     //  ReservationTable reservation_table(constraint_table, goal_location);
     Path path;
-    const SIPPInterval *interval = sipp_intervals.get_first_interval(this->agent_id, start_location, start_timestep);
-    if (interval == nullptr)
+    const int start_index(sipp_intervals.get_first_interval(this->agent_id, start_location, start_timestep));
+    if (start_index == -1)
         return path;
+
+    const SIPPInterval *interval(sipp_intervals.get_interval(start_location, start_index));
 
     // int last_target_collision_time = reservation_table.constraint_table.getLastCollisionTimestep(goal_location);
     // generate start and add it to the OPEN & FOCAL list
@@ -183,7 +187,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
     // auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
     //                             get<2>(interval), get<2>(interval));
 
-    SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, interval->high), start_location, start_timestep, h, nullptr, start_timestep, interval);
+    SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, interval->high), start_location, start_timestep, h, nullptr, start_timestep, interval, start_index);
 
     pushNodeToFocal(start);
 
@@ -232,12 +236,14 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
 
         for (int next_location : instance.getNeighbors(curr->location)) // move to neighboring locations
         {
-            for (const SIPPInterval *i : sipp_intervals.get_intervals(curr->location, next_location, curr->g_val + 1, curr->interval->high))
+            for (const int interval_index : sipp_intervals.get_intervals(curr->location, curr->interval_index, curr->g_val + 1, next_location))
             {
                 // int next_high_generation, next_timestep, next_high_expansion;
                 // bool next_v_collision, next_e_collision;
                 // tie(next_high_generation, next_timestep, next_high_expansion, next_v_collision, next_e_collision) = i;
-                int next_timestep = max(curr->g_val + 1, i->low);
+                interval = sipp_intervals.get_interval(next_location, interval_index);
+                assert(interval->agent_id == NO_AGENT);
+                int next_timestep = max(curr->g_val + 1, interval->low);
                 // if (next_timestep + my_heuristic[next_location] > reservation_table.constraint_table.length_max)
                 //     break;
 
@@ -248,9 +254,9 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
                 // SIPPNode* next = memory_pool.generate_node( ,next_location, next_timestep, next_h_val, curr, next_timestep,
                 //                          next_high_generation, next_high_expansion, next_v_collision, next_collisions);
 
-                SIPPNode next(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, i);
+                SIPPNode next(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, interval, interval_index);
                 // try to retrieve it from the hash table
-                int node_id = next.location * depth_limit + min(depth_limit, i->high);
+                int node_id = next.location * depth_limit + min(depth_limit, interval->high);
                 if (dominanceCheck(node_id, &next, memory_pool))
                 {
                     SIPPNode *next_ptr = memory_pool.replace_node(node_id, next);

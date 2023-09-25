@@ -435,7 +435,7 @@ public:
         return &(blocks_[block_id][list_id]);
     }
 
-    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval)
+    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval, int interval_index)
     {
         // if (id >= numblocks_)
         // {
@@ -460,6 +460,7 @@ public:
         node->parent = parent;
         node->timestep = timestep;
         node->interval = interval;
+        node->interval_index = interval_index;
         // node->high_expansion = high_expansion;
         // node->collision_v = collision_v;
         // node->num_of_conflicts = num_of_conflicts;
@@ -479,6 +480,7 @@ public:
         node->parent = new_node.parent;
         node->timestep = new_node.timestep;
         node->interval = new_node.interval;
+        node->interval_index = new_node.interval_index;
         // node->collision_v = new_node.collision_v;
         // node->num_of_conflicts = new_node.num_of_conflicts;
         return node;

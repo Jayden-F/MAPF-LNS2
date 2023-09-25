@@ -18,26 +18,24 @@ class SIPPIntervals
 {
 public:
     // in the constructor initalise intervals_ with map_size
-    SIPPIntervals(int map_size) : intervals_(map_size) {}
+    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(1) {}
 
-    const SIPPInterval *get_first_interval(int agent_id, int location, int start_time = 0);
-    vector<const SIPPInterval *> get_intervals(int from, int to, int low, int high);
+    int get_first_interval(int agent_id, int location, int start_time = 0);
+    const vector<int> get_intervals(int from, int interval, int timestep, int to);
+    const SIPPInterval *get_interval(int location, int index) const;
     void insert_path(int agent_id, vector<PathEntry> &path, int start = 0);
-    void remove_path(int agent_id, vector<PathEntry> &path, int start = 0);
-    void remove_horizon(int agent_id, vector<PathEntry> &path, int start, int period);
-    void truncate_interval(int agent_id, int location, int timestep);
+    void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0);
 
-    // Make sure their are not invtervals beyond current_timestep
     void cleared_intervals(int current_timestep) const
     {
-        for (auto &location : intervals_)
+        for (int i = 0; i < (int)intervals_.size(); i++)
         {
-            for (auto &interval : location)
+            for (int j = 0; j < (int)intervals_[i].size(); j++)
             {
-                if (interval.low >= current_timestep && interval.agent_id != NO_AGENT)
+                if (intervals_[i][j].high > current_timestep && intervals_[i][j].agent_id != NO_AGENT)
                 {
-                    cerr << "Error: interval " << interval.low << " " << interval.high << " " << interval.agent_id << " is beyond current_timestep " << current_timestep << endl;
-                    // exit(1);
+                    cerr << "Error: interval " << intervals_[i][j].low << " " << intervals_[i][j].high << " " << intervals_[i][j].agent_id << " is beyond current_timestep " << current_timestep << endl;
+                    exit(1);
                 }
             }
         }
@@ -45,18 +43,18 @@ public:
 
 private:
     vector<vector<SIPPInterval>> intervals_;
+    vector<int> clear_intervals_;
 
     void init_location(int location)
     {
-        // intervals_[location].reserve(10000);
         intervals_[location].emplace_back(0, MAX_TIMESTEP);
     }
     void split(int agent_id, int location, int low, int high);
     void merge(int location, int low);
+    void truncate_interval(int agent_id, int location, int timestep);
 
     inline int
-    binary_search(int location, int low, int left = 0) const;
-    vector<const SIPPInterval *> find_intervals(int from, int to, int low, int high) const;
+    binary_search(int location, int timestep) const;
 
     void validate_intervals(int location) const;
 };
