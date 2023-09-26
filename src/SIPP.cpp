@@ -292,7 +292,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
         //     printSearchTree();
         // }
     }
-    cout << "num_expanded: " << num_expanded << endl;
+    // cout << "num_expanded: " << num_expanded << endl;
     releaseNodes();
     return path;
 }

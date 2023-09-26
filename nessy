@@ -2,7 +2,7 @@
 
 # Default concurrency for make
 if [ -z "$CONCURRENCY" ]; then
-    CONCURRENCY=$(sysctl -n hw.physicalcpu)
+    CONCURRENCY=$(nproc)
 fi
 
 PROGRAM="$0"
@@ -31,6 +31,9 @@ CMAKE_FLAGS=("-DCMAKE_EXPORT_COMPILE_COMMANDS=1")
 case "$FLAVOUR" in
     fast)
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE")
+        ;;
+    fastsym)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-g")
         ;;
     *)
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG")
