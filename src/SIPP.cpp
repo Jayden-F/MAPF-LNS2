@@ -174,7 +174,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
     //     return path;
     //  ReservationTable reservation_table(constraint_table, goal_location);
     Path path;
-    const int start_index(sipp_intervals.get_first_interval(this->agent_id, start_location, start_timestep));
+    const int start_index(sipp_intervals.get_first_interval(start_location, start_timestep));
     if (start_index == -1)
         return path;
 
@@ -187,8 +187,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
     // auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
     //                             get<2>(interval), get<2>(interval));
 
-    SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, interval->high), start_location, start_timestep, h, nullptr, start_timestep, interval, start_index);
-
+    SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, interval->high - start_timestep), start_location, start_timestep, h, nullptr, start_timestep, interval, start_index);
     pushNodeToFocal(start);
 
     while (!focal_list.empty())
@@ -200,6 +199,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
         num_expanded++;
         assert(curr->location >= 0);
         // check if the popped node is a goal
+
         if (curr->location == goal_location && curr->interval->high > start_timestep + depth_limit)
         {
             updatePath(curr, path, start_timestep);
@@ -256,7 +256,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
 
                 SIPPNode next(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, interval, interval_index);
                 // try to retrieve it from the hash table
-                int node_id = next.location * depth_limit + min(depth_limit, interval->high);
+                int node_id = next.location * depth_limit + min(depth_limit, interval->high - start_timestep);
                 if (dominanceCheck(node_id, &next, memory_pool))
                 {
                     SIPPNode *next_ptr = memory_pool.replace_node(node_id, next);
@@ -292,6 +292,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
         //     printSearchTree();
         // }
     }
+
     releaseNodes();
     return path;
 }

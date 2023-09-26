@@ -3,7 +3,7 @@
 
 #define NO_AGENT -1
 
-int SIPPIntervals::get_first_interval(int agent_id, int location, int start_time)
+int SIPPIntervals::get_first_interval(int location, int start_time)
 {
     if (intervals_[location].empty())
         this->init_location(location);
@@ -22,10 +22,10 @@ const vector<int> SIPPIntervals::get_intervals(int from, int interval, int times
         this->init_location(to);
 
     int low_index(this->binary_search(to, timestep));
-    int high_index(this->binary_search(to, intervals_[from][interval].high - 1));
+    int high_index(this->binary_search(to, intervals_[from][interval].high - 1, low_index - 1));
 
-    clear_intervals_.clear();
-    clear_intervals_.reserve(high_index - low_index + 1);
+    this->clear_intervals_.clear();
+    this->clear_intervals_.reserve(high_index - low_index + 1);
 
     for (int i = low_index; i <= high_index; i++)
     {
@@ -36,9 +36,9 @@ const vector<int> SIPPIntervals::get_intervals(int from, int interval, int times
         // Edge Conflict
         if (i - 1 >= 0 &&
             interval + 1 < intervals_[from].size() &&
-            intervals_[to][i - 1].agent_id == intervals_[from][interval + 1].agent_id &&
             intervals_[to][i - 1].agent_id != NO_AGENT &&
-            intervals_[from][interval + 1].agent_id != NO_AGENT)
+            intervals_[from][interval + 1].agent_id != NO_AGENT &&
+            intervals_[to][i - 1].agent_id == intervals_[from][interval + 1].agent_id)
             continue;
 
         clear_intervals_.push_back(i);
@@ -296,34 +296,6 @@ void SIPPIntervals::merge(int location, int low)
     return;
 }
 
-inline int
-SIPPIntervals::binary_search(int location, int low) const
-{
-    int left(0);
-    int right(intervals_[location].size() - 1);
-    int mid;
-
-    // cout << "   binary_search: " << location << " @ [" << low << "," << low + 1 << ")" << endl;
-    // this->validate_intervals(location);
-
-    while (left <= right)
-    {
-        mid = (left + right) / 2;
-        if (intervals_[location][mid].high <= low)
-            left = mid + 1;
-        else if (intervals_[location][mid].low > low)
-            right = mid - 1;
-        else
-        {
-            assert(intervals_[location][mid].low <= low && intervals_[location][mid].high > low);
-            return mid;
-        }
-    }
-
-    cerr << "ERROR: binary_search failed to find interval" << endl;
-    return -1;
-}
-
 void SIPPIntervals::validate_intervals(int location) const
 {
     cout << "   location: " << location << endl
@@ -344,28 +316,28 @@ void SIPPIntervals::validate_intervals(int location) const
         if (intervals_[location][i].low >= intervals_[location][i].high)
         {
             cerr << "ERROR: interval " << i << " has low >= high" << endl;
-            // exit(1);
+            exit(1);
         }
         if (intervals_[location][i].agent_id == intervals_[location][i + 1].agent_id)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " have the same agent_id" << endl;
-            // exit(1);
+            exit(1);
         }
         if (intervals_[location][i].high > intervals_[location][i + 1].low)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " overlap" << endl;
-            // exit(1);
+            exit(1);
         }
         if (intervals_[location][i].high != intervals_[location][i + 1].low)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " do not touch" << endl;
-            // exit(1);
+            exit(1);
         }
     }
 
     if (intervals_[location].back().high != MAX_TIMESTEP)
     {
         cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
-        // exit(1);
+        exit(1);
     }
 }

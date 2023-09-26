@@ -18,43 +18,46 @@ class SIPPIntervals
 {
 public:
     // in the constructor initalise intervals_ with map_size
-    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(1) {}
+    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(0) {}
 
-    int get_first_interval(int agent_id, int location, int start_time = 0);
+    int get_first_interval(int location, int start_time = 0);
     const vector<int> get_intervals(int from, int interval, int timestep, int to);
     const SIPPInterval *get_interval(int location, int index) const;
     void insert_path(int agent_id, vector<PathEntry> &path, int start = 0);
     void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0);
 
-    void cleared_intervals(int current_timestep) const
-    {
-        for (int i = 0; i < (int)intervals_.size(); i++)
-        {
-            for (int j = 0; j < (int)intervals_[i].size(); j++)
-            {
-                if (intervals_[i][j].high > current_timestep && intervals_[i][j].agent_id != NO_AGENT)
-                {
-                    cerr << "Error: interval " << intervals_[i][j].low << " " << intervals_[i][j].high << " " << intervals_[i][j].agent_id << " is beyond current_timestep " << current_timestep << endl;
-                    exit(1);
-                }
-            }
-        }
-    }
-
 private:
     vector<vector<SIPPInterval>> intervals_;
     vector<int> clear_intervals_;
 
-    void init_location(int location)
-    {
-        intervals_[location].emplace_back(0, MAX_TIMESTEP);
-    }
+    void init_location(int location) { intervals_[location].emplace_back(0, MAX_TIMESTEP); }
     void split(int agent_id, int location, int low, int high);
     void merge(int location, int low);
     void truncate_interval(int agent_id, int location, int timestep);
+    void validate_intervals(int location) const;
 
     inline int
-    binary_search(int location, int timestep) const;
+    binary_search(int location, int timestep, int left = 0) const
+    {
+        int right = intervals_[location].size() - 1;
+        int mid;
 
-    void validate_intervals(int location) const;
+        while (left <= right)
+        {
+            mid = (left + right) / 2;
+            if (intervals_[location][mid].high <= timestep)
+                left = mid + 1;
+            else if (intervals_[location][mid].low > timestep)
+                right = mid - 1;
+            else
+            {
+                assert(intervals_[location][mid].low <= timestep && intervals_[location][mid].high > timestep);
+                return mid;
+            }
+        }
+
+        this->validate_intervals(location);
+        cerr << "ERROR: binary_search failed to find interval " << timestep << endl;
+        return -1;
+    }
 };
