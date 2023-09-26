@@ -236,7 +236,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
 
         for (int next_location : instance.getNeighbors(curr->location)) // move to neighboring locations
         {
-            for (const int interval_index : sipp_intervals.get_intervals(curr->location, curr->interval_index, curr->g_val + 1, next_location))
+            for (int interval_index : sipp_intervals.get_intervals(curr->location, curr->interval_index, curr->g_val + 1, next_location))
             {
                 // int next_high_generation, next_timestep, next_high_expansion;
                 // bool next_v_collision, next_e_collision;
@@ -292,7 +292,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
         //     printSearchTree();
         // }
     }
-
+    cout << "num_expanded: " << num_expanded << endl;
     releaseNodes();
     return path;
 }

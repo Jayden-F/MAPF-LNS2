@@ -18,12 +18,14 @@ class SIPPIntervals
 {
 public:
     // in the constructor initalise intervals_ with map_size
-    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(0) {}
+    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(1) {}
 
     int get_first_interval(int location, int start_time = 0);
     const vector<int> get_intervals(int from, int interval, int timestep, int to);
-    const SIPPInterval *get_interval(int location, int index) const;
-    void insert_path(int agent_id, vector<PathEntry> &path, int start = 0);
+    inline const SIPPInterval *get_interval(int location, int index) const
+    {
+        return &intervals_[location][index];
+    }    void insert_path(int agent_id, vector<PathEntry> &path, int start = 0);
     void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0);
 
 private:
@@ -37,8 +39,9 @@ private:
     void validate_intervals(int location) const;
 
     inline int
-    binary_search(int location, int timestep, int left = 0) const
+    binary_search(int location, int timestep) const
     {
+        int left(0);
         int right = intervals_[location].size() - 1;
         int mid;
 

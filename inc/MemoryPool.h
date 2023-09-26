@@ -451,6 +451,13 @@ public:
             std::cout << "node already generated " << node->id << std::endl;
             exit(1);
         }
+
+        if (node->location != location && node->location != -1)
+        {
+            std::cout << "node location is different " << node->location << "," << location << std::endl;
+            exit(1);
+        }
+
         node->reset();
         node->id = id;
         node->label = label_;
