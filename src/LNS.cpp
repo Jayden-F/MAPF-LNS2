@@ -483,7 +483,7 @@ bool LNS::runWinPP()
             // neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
             // if (neighbor.sum_of_costs >= neighbor.old_sum_of_costs) break;
 
-            sipp_intervals.insert_path(agents[id].id, agents[id].path, current_timestep);
+            sipp_intervals.insert_path(agents[id].id, agents[id].path, current_timestep, planning_horizon);
             remaining_agents--;
             ++p;
         }
