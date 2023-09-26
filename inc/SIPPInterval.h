@@ -36,8 +36,8 @@ private:
     void init_location(int location) { intervals_[location].emplace_back(0, MAX_TIMESTEP); }
     void split(int agent_id, int location, int low, int high);
     void merge(int location, int low);
-    void truncate_interval(int agent_id, int location, int timestep);
-    void validate_intervals(int location) const;
+    void truncate(int agent_id, int location, int timestep);
+    void validate(int location) const;
 
     inline int
     binary_search(int location, int timestep) const
@@ -60,7 +60,7 @@ private:
             }
         }
 
-        this->validate_intervals(location);
+        this->validate(location);
         cerr << "ERROR: binary_search failed to find interval " << timestep << endl;
         return -1;
     }
