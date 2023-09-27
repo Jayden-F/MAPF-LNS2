@@ -1,21 +1,22 @@
 from concurrent.futures import ProcessPoolExecutor
 import subprocess
+from tqdm import tqdm
 from itertools import product, chain
 from typing import List, Dict
 import glob 
 
 def linear_product(parameters: Dict[str, List[str]]) -> List[str]:
+    retval = []
     for experiment in product(*parameters.values()):
-        yield list(chain(*zip(parameters, experiment)))
+        retval.append( list(chain(*zip(parameters, experiment))))
+    return retval
 
 def run(arguments: List[str]):
-    print(*arguments)
-    return subprocess.call(arguments, shell=True)
+    subprocess.run(arguments, stdout=subprocess.DEVNULL)
 
 
 maps: List[str] = glob.glob("./map/orz*.map")  
 scenarios: List[str] = glob.glob("./scenario/orz*.scen")
-print(scenarios)
 
 # Format the following as a dictionary of lists of strings
 args = {
@@ -23,8 +24,8 @@ args = {
     "-m": maps,
     "-a": scenarios,
     "-o": ["test"],
-    "-k": ["200"],
-    "-t": ["30"],
+    "-k": ["100","200","300","400","500","600","700","800","900","1000"],
+    "-t": ["90"],
     "--initLNS": ["false"],
     "--initAlgo": ["winPP"],
     "--outputPaths": ["paths.txt"],
@@ -33,8 +34,6 @@ args = {
     "--screen": ["0"]
 }
 
-for params in linear_product(args):
-    print(*params)
-
-with ProcessPoolExecutor(max_workers=1) as executor:
-    executor.map(run, linear_product(args))
+experiments: List[str]  = linear_product(args)
+with ProcessPoolExecutor(max_workers=4) as executor:
+    result = list(tqdm(executor.map(run, experiments), total=len(experiments)))

@@ -2,7 +2,7 @@
 
 # Default concurrency for make
 if [ -z "$CONCURRENCY" ]; then
-    CONCURRENCY=$(sysctl -n hw.ncpu 2>/dev/null || echo 1)
+    CONCURRENCY=$(nproc)
 fi
 
 PROGRAM="$0"
