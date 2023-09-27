@@ -426,14 +426,16 @@ bool LNS::runWinPP()
 
     int planning_phases = 0;
     int current_timestep = 0;
+    std::vector<int> shuffled_agents = neighbor.agents;
     int num_agents_at_goal = 0;
     int max_agents = (int)agents.size();
-    auto *MT_S = new std::mt19937(0);
-
-    // path_table.reset();
-    // ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
-    // ReservationTable reservation_table(constraint_table, NO_AGENT);
+    std::mt19937 *MT_S = new std::mt19937(0);
     std::vector<Path> accumulated_paths(max_agents);
+
+    std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
+    // reduce priority of agents on goal
+    std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
+                          {const Agent& agent = agents[id]; return !agent.at_goal; });
 
     runtime = ((fsec)(Time::now() - start_time)).count();
     double T = time_limit - runtime; // time limit
@@ -443,23 +445,13 @@ bool LNS::runWinPP()
     while (num_agents_at_goal < max_agents && ((fsec)(Time::now() - time)).count() < T)
     {
 
-        auto shuffled_agents = neighbor.agents;
-        std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
-        // reduce priority of agents on goal
-        std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
-                              {const Agent& agent = agents[id]; return !agent.at_goal; });
-
         int remaining_agents = (int)shuffled_agents.size();
         auto p = shuffled_agents.begin();
         neighbor.sum_of_costs = 0;
 
-        // constraint_table.clear();
-        //        reservation_table.clear();
-        // sipp_intervals.cleared_intervals(current_timestep + 1);
         while (p != shuffled_agents.end())
         {
             int id = *p;
-            // reservation_table.goal_location = agents[id].path_planner->goal_location;
 
             if (screen >= 3)
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
@@ -478,6 +470,8 @@ bool LNS::runWinPP()
                 }
                 if (screen >= 2)
                     cout << "Agent Failed: " << agents[id].id << endl;
+
+                std::rotate(shuffled_agents.begin(), p, p + 1);
                 break;
             }
             // neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
@@ -506,7 +500,7 @@ bool LNS::runWinPP()
                     accumulated_paths[id][planning_phases * planning_period + loc] = agents[id].path[loc];
 
                 // Move agent to next planning phase and check if at goal
-                agents[id].at_goal = false; //                cout << "Agent: " << id << ":" << remaining_available_plan_length << endl;
+                agents[id].at_goal = false;
                 agents[id].path_planner->start_location = agents[id].path[window_end_index].location;
                 if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location)
                 {
@@ -525,7 +519,10 @@ bool LNS::runWinPP()
             planning_phases++;
             current_timestep += planning_period;
 
-            // path_table.reset();
+            std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
+            // reduce priority of agents on goal
+            std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
+                                  {const Agent& agent = agents[id]; return !agent.at_goal; });
         }
         else
         {
@@ -536,7 +533,6 @@ bool LNS::runWinPP()
     }
 
     // All Agents are at their goal
-    // path_table.reset();
     for (int id = 0; id < max_agents; id++)
     {
         // Prune waiting at goal from end of plan.

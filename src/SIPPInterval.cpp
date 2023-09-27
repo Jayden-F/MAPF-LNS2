@@ -3,7 +3,7 @@
 
 // #define DEBUG_MODE
 
-int SIPPIntervals::get_first_interval(int location, int start_time)
+const int SIPPIntervals::get_first_interval(int location, int start_time)
 {
     if (intervals_[location].empty())
         this->init_location(location);
