@@ -455,7 +455,7 @@ bool LNS::runWinPP()
 
         // constraint_table.clear();
         //        reservation_table.clear();
-
+        // sipp_intervals.cleared_intervals(current_timestep + 1);
         while (p != shuffled_agents.end())
         {
             int id = *p;
@@ -473,7 +473,7 @@ bool LNS::runWinPP()
                 while (rp != p)
                 {
                     int r_id = *rp;
-                    sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep);
+                    sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep, MAX_TIMESTEP, true);
                     ++rp;
                 }
                 if (screen >= 2)
@@ -514,7 +514,7 @@ bool LNS::runWinPP()
                     num_agents_at_goal++;
                 }
 
-                sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period);
+                sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period, MAX_TIMESTEP, true);
             }
 
             if (screen >= 1)
@@ -524,7 +524,6 @@ bool LNS::runWinPP()
 
             planning_phases++;
             current_timestep += planning_period;
-            // sipp_intervals.cleared_intervals(current_timestep);
 
             // path_table.reset();
         }
