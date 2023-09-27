@@ -16,42 +16,38 @@ else
     shift
 fi
 
-# Get flavour word (defaults to dev)
-case "$1" in
-    fast|debug|ubsan|asan|tsan)
-        FLAVOUR="$1"
-        shift
-        ;;
-    *)
-        FLAVOUR="debug"
-        ;;
-esac
+if [ -z "$1" ]; then
+    FLAVOUR="debug"
+else
+    FLAVOUR="$1"
+    shift
+fi
 
 CMAKE_FLAGS=("-DCMAKE_EXPORT_COMPILE_COMMANDS=1")
 case "$FLAVOUR" in
     fast)
+        echo "fast"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE")
         ;;
     fastsym)
+        echo "fastsym"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-g")
         ;;
     fastdebug)
+        echo "fastdebug"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-g -DDEBUG_MODE")
         ;;
-    *)
-        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG")
-        ;;
-esac
-
-case "$FLAVOUR" in
     ubsan)
-        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=undefined")
+        echo "ubsan"
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=undefined")
         ;;
     asan)
-        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=address -D_GLIBCXX_DEBUG")
+        echo "asan"
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=address -D_GLIBCXX_DEBUG -DDEBUG_MODE")
         ;;
     tsan)
-        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-fsanitize=thread")
+        echo  "tsan"
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=thread")
         ;;
 esac
 
@@ -59,7 +55,7 @@ BUILD_DIR="build"
 case "$ACTION" in
     build)
         (
-        cmake -B "$BUILD_DIR" "${CMAKE_FLAGS[@]}" "$SCRIPT_DIR"
+        cmake -B "$BUILD_DIR" "${CMAKE_FLAGS[@]}" "$SCRIPT_DIR" "clean"
         cd "$BUILD_DIR" || exit 1
         make -j "$CONCURRENCY"
         )
