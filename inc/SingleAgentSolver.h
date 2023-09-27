@@ -50,8 +50,8 @@ public:
 	virtual int getTravelTime(int start, int end, const ConstraintTable &constraint_table, int upper_bound) = 0;
 	virtual string getName() const = 0;
 
-	list<int> getNextLocations(int curr) const; // including itself and its neighbors
-	list<int> getNeighbors(int curr) const { return instance.getNeighbors(curr); }
+	vector<int> getNextLocations(int curr) const; // including itself and its neighbors
+	vector<int> getNeighbors(int curr) const { return instance.getNeighbors(curr); }
 	uint64_t getNumExpanded() const { return num_expanded; }
 	// int getStartLocation() const {return instance.start_locations[agent]; }
 	// int getGoalLocation() const {return instance.goal_locations[agent]; }

@@ -18,53 +18,53 @@
 	}
 	return false;
 }*/
-bool MDD::buildMDD(ConstraintTable& constraint_table, const SingleAgentSolver* _solver)
+bool MDD::buildMDD(ConstraintTable &constraint_table, const SingleAgentSolver *_solver)
 {
 	struct Node
 	{
 		int location = -1;
 		int timestep = -1;
 		int h_val = -1;
-		list<Node*> parents;
-		MDDNode* mdd_node = nullptr;
+		list<Node *> parents;
+		MDDNode *mdd_node = nullptr;
 		struct compare_node
 		{
 			// returns true if n1 > n2 (note -- this gives us *min*-heap).
-			bool operator()(const Node* n1, const Node* n2) const
+			bool operator()(const Node *n1, const Node *n2) const
 			{
 				return n1->timestep + n1->h_val >= n2->timestep + n2->h_val;
 			}
 		};
 		struct eqnode
 		{
-			bool operator()(const Node* s1, const Node* s2) const
+			bool operator()(const Node *s1, const Node *s2) const
 			{
 				return (s1 == s2) || (s1 && s2 &&
-					s1->location == s2->location &&
-					s1->timestep == s2->timestep);
+									  s1->location == s2->location &&
+									  s1->timestep == s2->timestep);
 			}
 		};
 		struct NodeHasher
 		{
-			size_t operator()(const Node* n) const
+			size_t operator()(const Node *n) const
 			{
 				size_t loc_hash = std::hash<int>()(n->location);
 				size_t timestep_hash = std::hash<int>()(n->timestep);
 				return (loc_hash ^ (timestep_hash << 1));
 			}
 		};
-		//Node() = default;
+		// Node() = default;
 		Node(int location, int timestep, int h_val) : location(location), timestep(timestep), h_val(h_val) {}
 	};
 	this->solver = _solver;
 	int holding_time = constraint_table.getHoldingTime(solver->goal_location, constraint_table.length_min); // the earliest timestep that the agent can hold its goal location. The length_min is considered here.
-	auto root = new Node(solver->start_location, 0, solver->my_heuristic[solver->start_location]); // Root
+	auto root = new Node(solver->start_location, 0, solver->my_heuristic[solver->start_location]);			// Root
 	// generate a heap that can save nodes (and a open_handle)
-	pairing_heap< Node*, compare<Node::compare_node> > open;
-	unordered_set<Node*, Node::NodeHasher, Node::eqnode> allNodes_table;
+	pairing_heap<Node *, compare<Node::compare_node>> open;
+	unordered_set<Node *, Node::NodeHasher, Node::eqnode> allNodes_table;
 	open.push(root);
 	allNodes_table.insert(root);
-	Node* goal_node = nullptr;
+	Node *goal_node = nullptr;
 	int upperbound = constraint_table.length_max;
 	while (!open.empty())
 	{
@@ -72,14 +72,14 @@ bool MDD::buildMDD(ConstraintTable& constraint_table, const SingleAgentSolver* _
 		open.pop();
 		if (goal_node == nullptr &&
 			curr->location == solver->goal_location && // arrive at the goal location
-			curr->timestep >= holding_time) // the agent can hold the goal location afterward
+			curr->timestep >= holding_time)			   // the agent can hold the goal location afterward
 		{
-		    if (curr->parents.size() != 1 || curr->parents.front()->location != solver->goal_location)
-            { // skip the case where curr only have parent node who locates at goal_location
-                goal_node = curr;
-                upperbound = curr->timestep;
-                continue;
-            }
+			if (curr->parents.size() != 1 || curr->parents.front()->location != solver->goal_location)
+			{ // skip the case where curr only have parent node who locates at goal_location
+				goal_node = curr;
+				upperbound = curr->timestep;
+				continue;
+			}
 		}
 		if (curr->timestep + curr->h_val > upperbound)
 			continue;
@@ -104,15 +104,15 @@ bool MDD::buildMDD(ConstraintTable& constraint_table, const SingleAgentSolver* _
 			else // If the child node exists
 			{
 				(*it)->parents.push_back(curr); // then add corresponding parent link and child link
-                delete next;
-                if (goal_node == nullptr &&
-                    (*it)->location == solver->goal_location && // arrive at the goal location
-                    (*it)->timestep >= holding_time && // the agent can hold the goal location afterward
-                    curr->location != solver->goal_location) // skip the case where curr only have parent node who locates at goal_location
-                {
-                    goal_node = (*it);
-                    upperbound = (*it)->timestep;
-                }
+				delete next;
+				if (goal_node == nullptr &&
+					(*it)->location == solver->goal_location && // arrive at the goal location
+					(*it)->timestep >= holding_time &&			// the agent can hold the goal location afterward
+					curr->location != solver->goal_location)	// skip the case where curr only have parent node who locates at goal_location
+				{
+					goal_node = (*it);
+					upperbound = (*it)->timestep;
+				}
 			}
 		}
 	}
@@ -120,7 +120,7 @@ bool MDD::buildMDD(ConstraintTable& constraint_table, const SingleAgentSolver* _
 	// Backward
 	assert(goal_node != nullptr);
 	levels.resize(goal_node->timestep + 1);
-	list<Node*> Q;
+	list<Node *> Q;
 	goal_node->mdd_node = new MDDNode(goal_node->location, goal_node->timestep);
 	levels.back().push_back(goal_node->mdd_node);
 	Q.push_back(goal_node);
@@ -130,34 +130,33 @@ bool MDD::buildMDD(ConstraintTable& constraint_table, const SingleAgentSolver* _
 		Q.pop_back();
 		for (auto parent : curr->parents)
 		{
-			if (curr == goal_node && parent->location == goal_node->location) 
-				continue;  // the parent of the goal node should not be at the goal location
+			if (curr == goal_node && parent->location == goal_node->location)
+				continue;					 // the parent of the goal node should not be at the goal location
 			if (parent->mdd_node == nullptr) // a new node
 			{
 				parent->mdd_node = new MDDNode(parent->location, parent->timestep);
 				levels[parent->timestep].push_back(parent->mdd_node);
 				Q.push_back(parent);
 			}
-			parent->mdd_node->children.push_back(curr->mdd_node); // add forward edge			
-			curr->mdd_node->parents.push_back(parent->mdd_node); // add backward edge	
+			parent->mdd_node->children.push_back(curr->mdd_node); // add forward edge
+			curr->mdd_node->parents.push_back(parent->mdd_node);  // add backward edge
 		}
 	}
 	assert(!levels[0].empty());
 	// release memory
 	for (auto it : allNodes_table)
 		delete it;
-    assert(levels.back().front()->location == solver->goal_location);
+	assert(levels.back().front()->location == solver->goal_location);
 	return true;
 }
 
-
-bool MDD::buildMDD(const ConstraintTable& ct,
-        int num_of_levels, const SingleAgentSolver* _solver)
+bool MDD::buildMDD(const ConstraintTable &ct,
+				   int num_of_levels, const SingleAgentSolver *_solver)
 {
-    this->solver = _solver;
-    auto root = new MDDNode(solver->start_location, nullptr); // Root
-	std::queue<MDDNode*> open;
-	list<MDDNode*> closed;
+	this->solver = _solver;
+	auto root = new MDDNode(solver->start_location, nullptr); // Root
+	std::queue<MDDNode *> open;
+	list<MDDNode *> closed;
 	open.push(root);
 	closed.push_back(root);
 	levels.resize(num_of_levels);
@@ -174,7 +173,7 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 		}
 		// We want (g + 1)+h <= f = numOfLevels - 1, so h <= numOfLevels - g - 2. -1 because it's the bound of the children.
 		int heuristicBound = num_of_levels - curr->level - 2;
-		list<int> next_locations = solver->getNextLocations(curr->location);
+		vector<int> next_locations = solver->getNextLocations(curr->location);
 		for (int next_location : next_locations) // Try every possible move. We only add backward edges in this step.
 		{
 			if (solver->my_heuristic[next_location] <= heuristicBound &&
@@ -195,7 +194,7 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 				if (!find) // Else generate a new mdd node
 				{
 					auto childNode = new MDDNode(next_location, curr);
-                    childNode->cost = num_of_levels - 1;
+					childNode->cost = num_of_levels - 1;
 					open.push(childNode);
 					closed.push_back(childNode);
 				}
@@ -211,7 +210,7 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 		if (parent->location == goal_node->location) // the parent of the goal node should not be at the goal location
 			continue;
 		levels[num_of_levels - 2].push_back(parent);
-		parent->children.push_back(goal_node); // add forward edge	
+		parent->children.push_back(goal_node); // add forward edge
 	}
 	for (int t = num_of_levels - 2; t > 0; t--)
 	{
@@ -223,7 +222,7 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 				{
 					levels[t - 1].push_back(parent);
 				}
-				parent->children.push_back(node); // add forward edge	
+				parent->children.push_back(node); // add forward edge
 			}
 		}
 	}
@@ -233,7 +232,7 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 		if (it->children.empty() && it->level < num_of_levels - 1)
 			delete it;
 	closed.clear();
-    assert(levels.back().front()->location == solver->goal_location);
+	assert(levels.back().front()->location == solver->goal_location);
 	return true;
 }
 
@@ -299,7 +298,7 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 				{
 					levels[t - 1].push_back(*parent);
 				}
-				(*parent)->children.push_back(*it); // add forward edge	
+				(*parent)->children.push_back(*it); // add forward edge
 			}
 		}
 	}
@@ -312,14 +311,13 @@ bool MDD::buildMDD(const ConstraintTable& ct,
 	return true;
 }*/
 
-
-void MDD::deleteNode(MDDNode* node)
+void MDD::deleteNode(MDDNode *node)
 {
 	levels[node->level].remove(node);
 	for (auto child = node->children.begin(); child != node->children.end(); ++child)
 	{
 		(*child)->parents.remove(node);
-		if((*child)->parents.empty())
+		if ((*child)->parents.empty())
 			deleteNode(*child);
 	}
 	for (auto parent = node->parents.begin(); parent != node->parents.end(); ++parent)
@@ -332,42 +330,42 @@ void MDD::deleteNode(MDDNode* node)
 
 void MDD::clear()
 {
-	if(levels.empty())
+	if (levels.empty())
 		return;
-	for (auto & level : levels)
+	for (auto &level : levels)
 	{
-		for (auto & it : level)
+		for (auto &it : level)
 			delete it;
 	}
 	levels.clear();
 }
 
-MDDNode* MDD::find(int location, int level) const
+MDDNode *MDD::find(int location, int level) const
 {
-	if(level < (int)levels.size())
+	if (level < (int)levels.size())
 		for (auto it : levels[level])
-			if(it->location == location)
+			if (it->location == location)
 				return it;
 	return nullptr;
 }
 
-MDD::MDD(const MDD & cpy) // deep copy
+MDD::MDD(const MDD &cpy) // deep copy
 {
 	levels.resize(cpy.levels.size());
 	auto root = new MDDNode(cpy.levels[0].front()->location, nullptr);
 	levels[0].push_back(root);
-	for(size_t t = 0; t < levels.size() - 1; t++)
+	for (size_t t = 0; t < levels.size() - 1; t++)
 	{
 		for (auto node = levels[t].begin(); node != levels[t].end(); ++node)
 		{
-			MDDNode* cpyNode = cpy.find((*node)->location, (*node)->level);
-			for (list<MDDNode*>::const_iterator cpyChild = cpyNode->children.begin(); cpyChild != cpyNode->children.end(); ++cpyChild)
+			MDDNode *cpyNode = cpy.find((*node)->location, (*node)->level);
+			for (list<MDDNode *>::const_iterator cpyChild = cpyNode->children.begin(); cpyChild != cpyNode->children.end(); ++cpyChild)
 			{
-				MDDNode* child = find((*cpyChild)->location, (*cpyChild)->level);
+				MDDNode *child = find((*cpyChild)->location, (*cpyChild)->level);
 				if (child == nullptr)
 				{
 					child = new MDDNode((*cpyChild)->location, (*node));
-          child->cost = (*cpyChild)->cost;
+					child->cost = (*cpyChild)->cost;
 					levels[child->level].push_back(child);
 					(*node)->children.push_back(child);
 				}
@@ -378,10 +376,9 @@ MDD::MDD(const MDD & cpy) // deep copy
 				}
 			}
 		}
-		
 	}
 
-  solver = cpy.solver;
+	solver = cpy.solver;
 }
 
 MDD::~MDD()
@@ -389,112 +386,135 @@ MDD::~MDD()
 	clear();
 }
 
-void MDD::increaseBy(const ConstraintTable&ct, int dLevel, SingleAgentSolver* solver){
-  auto oldHeight = levels.size();
-  auto numOfLevels = levels.size() + dLevel;
+void MDD::increaseBy(const ConstraintTable &ct, int dLevel, SingleAgentSolver *solver)
+{
+	auto oldHeight = levels.size();
+	auto numOfLevels = levels.size() + dLevel;
 	levels.resize(numOfLevels);
-  for (int l = 0; l < numOfLevels - 1; l++){
-    double heuristicBound = numOfLevels - l - 2+ 0.001;
+	for (int l = 0; l < numOfLevels - 1; l++)
+	{
+		double heuristicBound = numOfLevels - l - 2 + 0.001;
 
-    auto node_map = collectMDDlevel(this, l + 1);
+		auto node_map = collectMDDlevel(this, l + 1);
 
-    for (auto & it: levels[l]){
-      MDDNode* node_ptr = it;
+		for (auto &it : levels[l])
+		{
+			MDDNode *node_ptr = it;
 
-      auto next_locations = solver->getNextLocations(it->location);
-      for (int newLoc: next_locations)
-        // for (int i = 0; i < 5; i++) // Try every possible move. We only add backward edges in this step.
-        {
-          // int newLoc = node_ptr->location + solver.moves_offset[i];
-          if (solver->my_heuristic[newLoc] <= heuristicBound &&
-              !ct.constrained(newLoc, it->level + 1) &&
-              !ct.constrained(it->location, newLoc, it->level + 1)) // valid move
-            {
-              if (node_map.find(newLoc) == node_map.end()){
-                auto newNode = new MDDNode(newLoc, node_ptr);
-                levels[l + 1].push_back(newNode);
-                node_map[newLoc] = newNode;
-              }else{
-                node_map[newLoc]->parents.push_back(node_ptr);
-              }
-            }
-        }
-    }
-  }
+			auto next_locations = solver->getNextLocations(it->location);
+			for (int newLoc : next_locations)
+			// for (int i = 0; i < 5; i++) // Try every possible move. We only add backward edges in this step.
+			{
+				// int newLoc = node_ptr->location + solver.moves_offset[i];
+				if (solver->my_heuristic[newLoc] <= heuristicBound &&
+					!ct.constrained(newLoc, it->level + 1) &&
+					!ct.constrained(it->location, newLoc, it->level + 1)) // valid move
+				{
+					if (node_map.find(newLoc) == node_map.end())
+					{
+						auto newNode = new MDDNode(newLoc, node_ptr);
+						levels[l + 1].push_back(newNode);
+						node_map[newLoc] = newNode;
+					}
+					else
+					{
+						node_map[newLoc]->parents.push_back(node_ptr);
+					}
+				}
+			}
+		}
+	}
 
 	// Backward
-  for (int l = oldHeight; l < numOfLevels; l++){
-    MDDNode* goal_node = nullptr;
-    for(auto it:levels[l]){
-      if (it->location == solver->goal_location){
-        goal_node = it;
-        break;
-      }
-    }
+	for (int l = oldHeight; l < numOfLevels; l++)
+	{
+		MDDNode *goal_node = nullptr;
+		for (auto it : levels[l])
+		{
+			if (it->location == solver->goal_location)
+			{
+				goal_node = it;
+				break;
+			}
+		}
 
-    std::queue<MDDNode*> bfs_q({goal_node});
-    boost::unordered_set<MDDNode*> closed;
+		std::queue<MDDNode *> bfs_q({goal_node});
+		boost::unordered_set<MDDNode *> closed;
 
-    while (!bfs_q.empty()){
-      auto ptr = bfs_q.front();
-      ptr->cost = l;
+		while (!bfs_q.empty())
+		{
+			auto ptr = bfs_q.front();
+			ptr->cost = l;
 
-      bfs_q.pop();
-      for (auto parent_ptr:ptr->parents){
-        parent_ptr->children.push_back(ptr); // add forward edge
+			bfs_q.pop();
+			for (auto parent_ptr : ptr->parents)
+			{
+				parent_ptr->children.push_back(ptr); // add forward edge
 
-        if (closed.find(parent_ptr) == closed.end() && parent_ptr->cost == 0){
-          bfs_q.push(parent_ptr);
-          closed.insert(parent_ptr);
-        }
-      }
-    }
-  }
+				if (closed.find(parent_ptr) == closed.end() && parent_ptr->cost == 0)
+				{
+					bfs_q.push(parent_ptr);
+					closed.insert(parent_ptr);
+				}
+			}
+		}
+	}
 
 	// Delete useless nodes (nodes who don't have any children)
-  for (int l = 0; l < numOfLevels - 1; l++){
-    auto it = levels[l].begin();
-    while (it != levels[l].end()){
-      if (( *it )->children.empty()){
-        it = levels[l].erase(it);
-      }else{
-        it++;
-      }
-    }
-  }
+	for (int l = 0; l < numOfLevels - 1; l++)
+	{
+		auto it = levels[l].begin();
+		while (it != levels[l].end())
+		{
+			if ((*it)->children.empty())
+			{
+				it = levels[l].erase(it);
+			}
+			else
+			{
+				it++;
+			}
+		}
+	}
 }
 
-MDDNode* MDD::goalAt(int level){
-  if (level >= levels.size()){return nullptr;}
+MDDNode *MDD::goalAt(int level)
+{
+	if (level >= levels.size())
+	{
+		return nullptr;
+	}
 
-  for (MDDNode* ptr: levels[level]){
-    if (ptr->location == solver->goal_location && ptr->cost == level){
-      return ptr;
-    }
-  }
-  return nullptr;
-  // return levels[level][goal_location].get();
+	for (MDDNode *ptr : levels[level])
+	{
+		if (ptr->location == solver->goal_location && ptr->cost == level)
+		{
+			return ptr;
+		}
+	}
+	return nullptr;
+	// return levels[level][goal_location].get();
 }
 
 void MDD::printNodes() const
 {
-    for (auto level : levels)
-    {
-        cout << level.front()->level << "\t";
-        for (auto loc : level)
-        {
-            cout << loc->location << ", ";
-        }
-        cout << endl;
-    }
+	for (auto level : levels)
+	{
+		cout << level.front()->level << "\t";
+		for (auto loc : level)
+		{
+			cout << loc->location << ", ";
+		}
+		cout << endl;
+	}
 }
 
-std::ostream& operator<<(std::ostream& os, const MDD& mdd)
+std::ostream &operator<<(std::ostream &os, const MDD &mdd)
 {
-	for (const auto& level : mdd.levels)
+	for (const auto &level : mdd.levels)
 	{
 		cout << "L" << level.front()->level << ": ";
-		for (const auto& node : level)
+		for (const auto &node : level)
 		{
 			cout << node->location << ",";
 		}
@@ -503,9 +523,7 @@ std::ostream& operator<<(std::ostream& os, const MDD& mdd)
 	return os;
 }
 
-
-
-SyncMDD::SyncMDD(const MDD & cpy) // deep copy of a MDD
+SyncMDD::SyncMDD(const MDD &cpy) // deep copy of a MDD
 {
 	levels.resize(cpy.levels.size());
 	auto root = new SyncMDDNode(cpy.levels[0].front()->location, nullptr);
@@ -514,10 +532,10 @@ SyncMDD::SyncMDD(const MDD & cpy) // deep copy of a MDD
 	{
 		for (auto node = levels[t].begin(); node != levels[t].end(); ++node)
 		{
-			MDDNode* cpyNode = cpy.find((*node)->location, t);
-			for (list<MDDNode*>::const_iterator cpyChild = cpyNode->children.begin(); cpyChild != cpyNode->children.end(); ++cpyChild)
+			MDDNode *cpyNode = cpy.find((*node)->location, t);
+			for (list<MDDNode *>::const_iterator cpyChild = cpyNode->children.begin(); cpyChild != cpyNode->children.end(); ++cpyChild)
 			{
-				SyncMDDNode* child = find((*cpyChild)->location, (*cpyChild)->level);
+				SyncMDDNode *child = find((*cpyChild)->location, (*cpyChild)->level);
 				if (child == nullptr)
 				{
 					child = new SyncMDDNode((*cpyChild)->location, (*node));
@@ -531,11 +549,10 @@ SyncMDD::SyncMDD(const MDD & cpy) // deep copy of a MDD
 				}
 			}
 		}
-
 	}
 }
 
-SyncMDDNode* SyncMDD::find(int location, int level) const
+SyncMDDNode *SyncMDD::find(int location, int level) const
 {
 	if (level < (int)levels.size())
 		for (auto it : levels[level])
@@ -544,7 +561,7 @@ SyncMDDNode* SyncMDD::find(int location, int level) const
 	return nullptr;
 }
 
-void SyncMDD::deleteNode(SyncMDDNode* node, int level)
+void SyncMDD::deleteNode(SyncMDDNode *node, int level)
 {
 	levels[level].remove(node);
 	for (auto child = node->children.begin(); child != node->children.end(); ++child)
@@ -561,50 +578,48 @@ void SyncMDD::deleteNode(SyncMDDNode* node, int level)
 	}
 }
 
-
 void SyncMDD::clear()
 {
 	if (levels.empty())
 		return;
-	for (auto & level : levels)
+	for (auto &level : levels)
 	{
-		for (auto & it : level)
+		for (auto &it : level)
 			delete it;
 	}
 	levels.clear();
 }
-
 
 SyncMDD::~SyncMDD()
 {
 	clear();
 }
 
-MDD* MDDTable::findMDD(HLNode& node, int agent) const
+MDD *MDDTable::findMDD(HLNode &node, int agent) const
 {
-    ConstraintsHasher c(agent, &node);
-    auto got = lookupTable[c.a].find(c);
-    if (got != lookupTable[c.a].end())
-        return got->second;
-    else
-        return nullptr;
+	ConstraintsHasher c(agent, &node);
+	auto got = lookupTable[c.a].find(c);
+	if (got != lookupTable[c.a].end())
+		return got->second;
+	else
+		return nullptr;
 }
 
-MDD * MDDTable::getMDD(HLNode& node, int id, size_t mdd_levels)
+MDD *MDDTable::getMDD(HLNode &node, int id, size_t mdd_levels)
 {
 	ConstraintsHasher c(id, &node);
 	auto got = lookupTable[c.a].find(c);
 	if (got != lookupTable[c.a].end())
 	{
-		assert((node.getName() == "CBS Node" &&  got->second->levels.size() == mdd_levels) ||
-			(node.getName() == "ECBS Node" &&  got->second->levels.size() <= mdd_levels));
+		assert((node.getName() == "CBS Node" && got->second->levels.size() == mdd_levels) ||
+			   (node.getName() == "ECBS Node" && got->second->levels.size() <= mdd_levels));
 		return got->second;
 	}
 	releaseMDDMemory(id);
 	clock_t t = clock();
-	MDD * mdd = new MDD();
+	MDD *mdd = new MDD();
 	ConstraintTable ct(initial_constraints[id]);
-    ct.insert2CT(node, id);
+	ct.insert2CT(node, id);
 	if (node.getName() == "CBS Node")
 		mdd->buildMDD(ct, mdd_levels, search_engines[id]);
 	else // ECBS node
@@ -617,7 +632,6 @@ MDD * MDDTable::getMDD(HLNode& node, int id, size_t mdd_levels)
 	accumulated_runtime += (double)(clock() - t) / CLOCKS_PER_SEC;
 	return mdd;
 }
-
 
 /*void MDDTable::findSingletons(HLNode& node, int agent, Path& path)
 {
@@ -655,7 +669,7 @@ void MDDTable::releaseMDDMemory(int id)
 
 void MDDTable::clear()
 {
-	for (auto& mdds : lookupTable)
+	for (auto &mdds : lookupTable)
 	{
 		for (auto mdd : mdds)
 		{
@@ -665,12 +679,13 @@ void MDDTable::clear()
 	lookupTable.clear();
 }
 
-unordered_map<int, MDDNode*> collectMDDlevel(MDD* mdd, int i){
-  unordered_map<int, MDDNode*> loc2mdd;
-  for (MDDNode* it_0 : mdd->levels[i]){
-    int loc = it_0->location;
-    loc2mdd[loc] = it_0;
-  }
-  return loc2mdd;
+unordered_map<int, MDDNode *> collectMDDlevel(MDD *mdd, int i)
+{
+	unordered_map<int, MDDNode *> loc2mdd;
+	for (MDDNode *it_0 : mdd->levels[i])
+	{
+		int loc = it_0->location;
+		loc2mdd[loc] = it_0;
+	}
+	return loc2mdd;
 }
-

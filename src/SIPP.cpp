@@ -481,7 +481,7 @@ int SIPP::getTravelTime(int start, int end, const ConstraintTable &constraint_ta
             length = curr->g_val;
             break;
         }
-        list<int> next_locations = instance.getNeighbors(curr->location);
+        vector<int> next_locations = instance.getNeighbors(curr->location);
         next_locations.emplace_back(curr->location);
         for (int next_location : next_locations)
         {
