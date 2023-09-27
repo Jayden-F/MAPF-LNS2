@@ -478,6 +478,12 @@ public:
     SIPPNode *replace_node(int id, SIPPNode &new_node)
     {
         SIPPNode *node = generate(id);
+
+        if (node->location != new_node.location && node->location != -1)
+        {
+            std::cout << "node location is different " << node->location << "," << new_node.location << std::endl;
+            exit(1);
+        }
         node->reset();
         node->id = id;
         node->label = label_;
