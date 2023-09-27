@@ -174,7 +174,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
     //     return path;
     //  ReservationTable reservation_table(constraint_table, goal_location);
     Path path;
-    const int start_index(sipp_intervals.get_first_interval(agent_id, start_location, start_timestep));
+    const int start_index(sipp_intervals.get_first_interval(start_location, start_timestep));
     if (start_index == -1)
         return path;
 

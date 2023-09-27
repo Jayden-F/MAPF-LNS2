@@ -24,13 +24,12 @@ private:
 
 public:
     // in the constructor initalise intervals_ with map_size
-    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(1) {}
-
-    int get_first_interval(int agent_id, int location, int start_time = 0);
+    SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(0) {}
+    int get_first_interval(int location, int start_time = 0);
     const vector<int> get_intervals(int from, int interval, int timestep, int to);
     inline const SIPPInterval *get_interval(int location, int index) const { return &intervals_[location][index]; }
     void insert_path(int agent_id, vector<PathEntry> &path, int start = 0, int horizon = MAX_TIMESTEP);
-    void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0, int horizon = MAX_TIMESTEP, bool skip_start = false);
+    void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0, int horizon = MAX_TIMESTEP);
     void cleared_intervals(int timestep) const
     {
         for (int i = 0; i < intervals_.size(); i++)

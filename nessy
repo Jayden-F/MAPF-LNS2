@@ -35,7 +35,11 @@ case "$FLAVOUR" in
         ;;
     fastdebug)
         echo "fastdebug"
-        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-g -DDEBUG_MODE")
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-DDEBUG_MODE")
+        ;;
+    debug)
+        echo "debug"
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-DDEBUG_MODE")
         ;;
     ubsan)
         echo "ubsan"
@@ -55,7 +59,7 @@ BUILD_DIR="build"
 case "$ACTION" in
     build)
         (
-        cmake -B "$BUILD_DIR" "${CMAKE_FLAGS[@]}" "$SCRIPT_DIR" "clean"
+        cmake -B "$BUILD_DIR" "${CMAKE_FLAGS[@]}" "$SCRIPT_DIR"
         cd "$BUILD_DIR" || exit 1
         make -j "$CONCURRENCY"
         )

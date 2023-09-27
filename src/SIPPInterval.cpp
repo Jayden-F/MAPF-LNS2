@@ -3,18 +3,12 @@
 
 // #define DEBUG_MODE
 
-int SIPPIntervals::get_first_interval(int agent_id, int location, int start_time)
+int SIPPIntervals::get_first_interval(int location, int start_time)
 {
     if (intervals_[location].empty())
         this->init_location(location);
 
     int index(this->binary_search(location, start_time));
-
-    if (intervals_[location][index].agent_id == agent_id)
-    {
-        this->merge(location, start_time);
-        index = this->binary_search(location, start_time);
-    }
 
     if (intervals_[location][index].agent_id != NO_AGENT)
         return -1;
@@ -80,11 +74,8 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     this->split(agent_id, location, low, high);
 }
 
-void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start, int period, int horizon, bool skip_start)
+void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start, int period, int horizon)
 {
-    if (skip_start)
-        period++;
-
     int location = path[period].location;
     this->truncate(agent_id, location, start + period);
 
@@ -112,7 +103,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
 
     int length = intervals_[location][index].high - intervals_[location][index].low;
 
-    // Shorten Interval
+    // Interval early interval off at timestep
     if (length > 1 && intervals_[location][index + 1].low < timestep)
     {
         intervals_[location][index + 1].low = timestep;
@@ -138,6 +129,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
         return;
     }
 
+    // Merge with previous interval if it is safe
     if (index >= 1 &&
         intervals_[location][index - 1].agent_id == NO_AGENT)
     {
@@ -150,8 +142,8 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
         return;
     }
 
+    // Merge with next interval if it is safe
     if (intervals_[location][index + 1].agent_id == NO_AGENT)
-    // Absorb following interval if it is safe
     {
         intervals_[location][index].agent_id = NO_AGENT;
         intervals_[location][index].high = intervals_[location][index + 1].high;
@@ -163,6 +155,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
         return;
     }
 
+    // Allocate interval to No Agent
     intervals_[location][index].agent_id = NO_AGENT;
 #ifdef DEBUG_MODE
     this->validate(location);
@@ -254,7 +247,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
         return;
     }
 
-    // interval is contained within current interval
+    // proposed interval is subset of found interval
     if (intervals_[location][interval_index].low < low &&
         intervals_[location][interval_index].high > high)
     {
