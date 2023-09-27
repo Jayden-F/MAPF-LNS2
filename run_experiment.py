@@ -2,6 +2,7 @@ from concurrent.futures import ProcessPoolExecutor
 import subprocess
 from tqdm import tqdm
 from itertools import product, chain
+from os import getpid
 from typing import List, Dict
 import glob 
 
@@ -12,6 +13,7 @@ def linear_product(parameters: Dict[str, List[str]]) -> List[str]:
     return retval
 
 def run(arguments: List[str]):
+    print(f"Process {getpid()}: running {' '.join(arguments)}")
     subprocess.run(arguments, stdout=subprocess.DEVNULL)
 
 
@@ -24,7 +26,7 @@ args = {
     "-m": maps,
     "-a": scenarios,
     "-o": ["test"],
-    "-k": ["100","200","300","400","500","600","700","800","900","1000"],
+    "-k": ["10"],
     "-t": ["90"],
     "--initLNS": ["false"],
     "--initAlgo": ["winPP"],
@@ -34,6 +36,7 @@ args = {
     "--screen": ["0"]
 }
 
-experiments: List[str]  = linear_product(args)
-with ProcessPoolExecutor(max_workers=4) as executor:
-    result = list(tqdm(executor.map(run, experiments), total=len(experiments)))
+if __name__ == "__main__":
+    experiments: List[str]  = linear_product(args)
+    with ProcessPoolExecutor(max_workers=2) as executor:
+        result = list(tqdm(executor.map(run, experiments), total=len(experiments), desc="Running experiments"))
