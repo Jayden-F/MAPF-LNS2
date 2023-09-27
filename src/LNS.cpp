@@ -430,6 +430,7 @@ bool LNS::runWinPP()
     int num_agents_at_goal = 0;
     int max_agents = (int)agents.size();
     std::mt19937 *MT_S = new std::mt19937(0);
+    auto random_begin = shuffled_agents.begin();
     std::vector<Path> accumulated_paths(max_agents);
 
     std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
@@ -472,6 +473,11 @@ bool LNS::runWinPP()
                     cout << "Agent Failed: " << agents[id].id << endl;
 
                 std::rotate(shuffled_agents.begin(), p, p + 1);
+                std::shuffle(random_begin, shuffled_agents.end(), *MT_S); // shuffle agents
+                // reduce priority of agents on goal
+                std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
+                                      {const Agent& agent = agents[id]; return !agent.at_goal; });
+                random_begin++;
                 break;
             }
             // neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
@@ -523,6 +529,7 @@ bool LNS::runWinPP()
             // reduce priority of agents on goal
             std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
                                   {const Agent& agent = agents[id]; return !agent.at_goal; });
+            random_begin = shuffled_agents.begin();
         }
         else
         {
