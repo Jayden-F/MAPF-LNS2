@@ -433,11 +433,6 @@ bool LNS::runWinPP()
     auto random_begin = shuffled_agents.begin();
     std::vector<Path> accumulated_paths(max_agents);
 
-    std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
-    // reduce priority of agents on goal
-    std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
-                          {const Agent& agent = agents[id]; return !agent.at_goal; });
-
     runtime = ((fsec)(Time::now() - start_time)).count();
     double T = time_limit - runtime; // time limit
     if (!iteration_stats.empty())
@@ -449,6 +444,11 @@ bool LNS::runWinPP()
         int remaining_agents = (int)shuffled_agents.size();
         auto p = shuffled_agents.begin();
         neighbor.sum_of_costs = 0;
+
+        std::shuffle(random_begin, shuffled_agents.end(), *MT_S); // shuffle agents
+                                                                  // reduce priority of agents on goal
+        std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
+                              {const Agent& agent = agents[id]; return !agent.at_goal; });
 
         while (p != shuffled_agents.end())
         {
@@ -473,10 +473,6 @@ bool LNS::runWinPP()
                     cout << "Agent Failed: " << agents[id].id << endl;
 
                 std::rotate(shuffled_agents.begin(), p, p + 1);
-                std::shuffle(random_begin, shuffled_agents.end(), *MT_S); // shuffle agents
-                // reduce priority of agents on goal
-                std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
-                                      {const Agent& agent = agents[id]; return !agent.at_goal; });
                 random_begin++;
                 break;
             }
@@ -524,11 +520,6 @@ bool LNS::runWinPP()
 
             planning_phases++;
             current_timestep += planning_period;
-
-            std::shuffle(shuffled_agents.begin(), shuffled_agents.end(), *MT_S); // shuffle agents
-            // reduce priority of agents on goal
-            std::stable_partition(shuffled_agents.begin(), shuffled_agents.end(), [&](int id)
-                                  {const Agent& agent = agents[id]; return !agent.at_goal; });
             random_begin = shuffled_agents.begin();
         }
         else
