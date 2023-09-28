@@ -13,7 +13,7 @@ def linear_product(parameters: Dict[str, List[str]]) -> List[str]:
     return retval
 
 def run(arguments: List[str]):
-    print(f"Process {getpid()}: running {' '.join(arguments)}")
+    # print(f"Process {getpid()}: running {' '.join(arguments)}")
     subprocess.run(arguments, stdout=subprocess.DEVNULL)
 
 
@@ -26,7 +26,7 @@ args = {
     "-m": maps,
     "-a": scenarios,
     "-o": ["test"],
-    "-k": ["10"],
+    "-k": [str(x) for x in range(500, 1600, 100)],
     "-t": ["90"],
     "--initLNS": ["false"],
     "--initAlgo": ["winPP"],
@@ -38,5 +38,5 @@ args = {
 
 if __name__ == "__main__":
     experiments: List[str]  = linear_product(args)
-    with ProcessPoolExecutor(max_workers=2) as executor:
+    with ProcessPoolExecutor(max_workers=6) as executor:
         result = list(tqdm(executor.map(run, experiments), total=len(experiments), desc="Running experiments"))

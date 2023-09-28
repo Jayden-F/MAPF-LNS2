@@ -473,7 +473,7 @@ bool LNS::runWinPP()
                     cout << "Agent Failed: " << agents[id].id << endl;
 
                 std::rotate(shuffled_agents.begin(), p, p + 1);
-                random_begin++;
+                random_begin = shuffled_agents.end();
                 break;
             }
             // neighbor.sum_of_costs += (int)agents[id].path.size() - 1;
