@@ -102,6 +102,12 @@ public:
 		is_closed = true;
 	}
 
+	inline void
+	print(std::ostream &out) const
+	{
+		out << "id=" << id << " loc=" << location << " g=" << g_val << " h=" << h_val << " f=" << getFVal() << " t=" << timestep << " #conf=" << num_of_conflicts << " inOL=" << in_openlist << " is_goal=" << is_goal << " wait=" << wait_at_goal << " closed=" << is_closed << " parent=" << parent << " label=" << label << endl;
+	}
+
 	inline uint32_t
 	get_priority() const
 	{
