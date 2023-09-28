@@ -5,6 +5,7 @@
 #include "MemoryPool.h"
 #include "LLNode.h"
 #include "common.h"
+#include "pqueue.h"
 
 class SingleAgentSolver
 {
@@ -40,7 +41,7 @@ public:
 		Path path;
 		return path;
 	} // return the path
-	virtual Path findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start = 0, int depth_limit = MAX_TIMESTEP)
+	virtual Path findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start = 0, int depth_limit = MAX_TIMESTEP)
 	{
 		Path path;
 		return path;

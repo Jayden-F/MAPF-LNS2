@@ -28,16 +28,18 @@ public:
 	//                              collision_v(other.collision_v) {}
 	~SIPPNode() {}
 
-	void copy(const SIPPNode &other) // copy everything except for handles
-	{
-		cout << "search node copied" << endl;
-		LLNode::copy(other);
-		// high_generation = other.high_generation;
-		// high_expansion = other.high_expansion;
-		interval = other.interval;
-		interval_index = other.interval_index;
-		// collision_v = other.collision_v;
-	}
+	SIPPNode (const SIPPNode&) = delete;
+
+	// void copy(const SIPPNode &other) // copy everything except for handles
+	// {
+	// 	cout << "search node copied" << endl;
+	// 	LLNode::copy(other);
+	// 	// high_generation = other.high_generation;
+	// 	// high_expansion = other.high_expansion;
+	// 	interval = other.interval;
+	// 	interval_index = other.interval_index;
+	// 	// collision_v = other.collision_v;
+	// }
 	void reset()
 	{
 		LLNode::reset();

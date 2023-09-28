@@ -451,6 +451,7 @@ public:
             std::cout << "node already generated " << node->id << std::endl;
             exit(1);
         }
+        node->reset();
 
         if (node->location != location && node->location != -1)
         {
@@ -474,8 +475,7 @@ public:
 
         return node;
     }
-
-    SIPPNode *replace_node(int id, SIPPNode &new_node)
+    SIPPNode *generate_node(int id, SIPPNode &new_node)
     {
         SIPPNode *node = generate(id);
 
@@ -485,6 +485,28 @@ public:
             exit(1);
         }
         node->reset();
+        node->id = id;
+        node->label = label_;
+        node->location = new_node.location;
+        node->g_val = new_node.g_val;
+        node->h_val = new_node.h_val;
+        node->parent = new_node.parent;
+        node->timestep = new_node.timestep;
+        node->interval = new_node.interval;
+        node->interval_index = new_node.interval_index;
+        // node->collision_v = new_node.collision_v;
+        // node->num_of_conflicts = new_node.num_of_conflicts;
+        return node;
+    }
+    SIPPNode *replace_node(int id, SIPPNode &new_node)
+    {
+        SIPPNode *node = generate(id);
+
+        if (node->location != new_node.location && node->location != -1)
+        {
+            std::cout << "node location is different " << node->location << "," << new_node.location << std::endl;
+            exit(1);
+        }
         node->id = id;
         node->label = label_;
         node->location = new_node.location;

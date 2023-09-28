@@ -165,9 +165,10 @@ Path SIPP::findPath(const ConstraintTable &constraint_table, int depth_limit)
 
 // find path by A*
 // Returns a path that minimizes the collisions with the paths in the path table, breaking ties by the length
-Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start_timestep, int depth_limit)
+Path SIPP::findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start_timestep, int depth_limit)
 {
     memory_pool.reset();
+    open.clear();
     reset();
     // Path path = findNoCollisionPath(constraint_table);
     // if (!path.empty())
@@ -188,12 +189,12 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
     //                             get<2>(interval), get<2>(interval));
 
     SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, interval->high - start_timestep), start_location, start_timestep, h, nullptr, start_timestep, interval, start_index);
-    pushNodeToFocal(start);
+    open.push(start);
+    SIPPNode next;
 
-    while (!focal_list.empty())
+    while (open.size() > 0)
     {
-        SIPPNode *curr = focal_list.top();
-        focal_list.pop();
+        SIPPNode *curr = open.pop();
         // curr->in_openlist = false;
         curr->close();
         num_expanded++;
@@ -254,14 +255,10 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
                 // SIPPNode* next = memory_pool.generate_node( ,next_location, next_timestep, next_h_val, curr, next_timestep,
                 //                          next_high_generation, next_high_expansion, next_v_collision, next_collisions);
 
-                SIPPNode next(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, interval, interval_index);
+                next = SIPPNode(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, interval, interval_index);
                 // try to retrieve it from the hash table
-                int node_id = next.location * depth_limit + min(depth_limit, interval->high - start_timestep);
-                if (dominanceCheck(node_id, &next, memory_pool))
-                {
-                    SIPPNode *next_ptr = memory_pool.replace_node(node_id, next);
-                    pushNodeToFocal(next_ptr);
-                }
+                int node_id = next.location * depth_limit + min(depth_limit, next.interval->high - start_timestep);
+                dominanceCheck(open, node_id, &next, memory_pool);
             }
             // } // end for loop that generates successors
             // // wait at the current location
@@ -293,7 +290,7 @@ Path SIPP::findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int 
         // }
     }
     // cout << "num_expanded: " << num_expanded << endl;
-    releaseNodes();
+    // releaseNodes();
     return path;
 }
 
@@ -651,47 +648,64 @@ bool SIPP::dominanceCheck(SIPPNode *new_node)
     return true;
 }
 
-bool SIPP::dominanceCheck(int id, SIPPNode *new_node, MemoryPool &memory_pool)
+// return true iff we the new node node domintates old
+bool SIPP::dominanceCheck(pqueue_min &open, int id, SIPPNode *new_node, MemoryPool &memory_pool)
 {
-    SIPPNode *old_node(nullptr);
-
+    SIPPNode *pool_node(nullptr);
+    // Node not generated in window
     if (!memory_pool.has_node(id))
-        return true;
-
-    old_node = memory_pool.get_node(id);
-
-    // for (auto & old_node : ptr)
-    // {
-    if (old_node->timestep <= new_node->timestep and
-        old_node->num_of_conflicts <= new_node->num_of_conflicts)
-    { // the new node is dominated by the old node
-        return false;
-    }
-    else if (old_node->timestep >= new_node->timestep and
-             old_node->num_of_conflicts >= new_node->num_of_conflicts) // the old node is dominated by the new node
-    {                                                                  // delete the old node
-        if (!old_node->is_closed)                                      // the old node has not been expanded yet
-            eraseNodeFromLists(old_node);                              // delete it from open and/or focal lists
-        else                                                           // the old node has been expanded already
-            num_reopened++;                                            // re-expand it
-        // useless_nodes.push_back(old_node);
-        // ptr->second.remove(old_node);
-        num_generated--; // this is because we later will increase num_generated when we insert the new node into lists.
+    {
+        pool_node = memory_pool.generate_node(id, *new_node);
+        open.push(pool_node);
         return true;
     }
-    else if (old_node->timestep < new_node->high_expansion and new_node->timestep < old_node->high_expansion)
-    { // intervals overlap --> we need to split the node to make them disjoint
-        if (old_node->timestep <= new_node->timestep)
-        {
-            assert(old_node->num_of_conflicts > new_node->num_of_conflicts);
-            old_node->high_expansion = new_node->timestep;
-        }
-        else // i.e., old_node->timestep > new_node->timestep
-        {
-            assert(old_node->num_of_conflicts <= new_node->num_of_conflicts);
-            new_node->high_expansion = old_node->timestep;
-        }
-        // }
+
+    pool_node = memory_pool.get_node(id);
+
+    if (new_node->getFVal() < pool_node->getFVal())
+    {
+        pool_node = memory_pool.replace_node(id, *new_node);
+        open.decrease_key(pool_node);
+        return true;
     }
-    return true;
+
+    return false;
+
+    // // for (auto & old_node : ptr)
+    // // {
+    // if (old_node->timestep <= new_node->timestep and
+    //     old_node->num_of_conflicts <= new_node->num_of_conflicts)
+    // { // the new node is dominated by the old node
+    //     return false;
+    // }
+    // else if (old_node->timestep >= new_node->timestep and
+    //          old_node->num_of_conflicts >= new_node->num_of_conflicts) // the old node is dominated by the new node
+    // {                                                                  // delete the old node
+    //     if (!old_node->is_closed)                                      // the old node has not been expanded yet
+    //         eraseNodeFromLists(old_node);                              // delete it from open and/or focal lists
+    //     else
+    //     {
+    //         assert(false);  // the old node has been expanded already
+    //         num_reopened++; // re-expand it
+    //     }
+    //     // useless_nodes.push_back(old_node);
+    //     // ptr->second.remove(old_node);
+    //     num_generated--; // this is because we later will increase num_generated when we insert the new node into lists.
+    //     return true;
+    // }
+    // else if (old_node->timestep < new_node->interval->high and new_node->timestep < old_node->interval->high)
+    // { // intervals overlap --> we need to split the node to make them disjoint
+    //     if (old_node->timestep <= new_node->timestep)
+    //     {
+    //         assert(old_node->num_of_conflicts > new_node->num_of_conflicts);
+    //         old_node->high_expansion = new_node->timestep;
+    //     }
+    //     else // i.e., old_node->timestep > new_node->timestep
+    //     {
+    //         assert(old_node->num_of_conflicts <= new_node->num_of_conflicts);
+    //         new_node->high_expansion = old_node->timestep;
+    //     }
+    //     // }
+    // }
+    // return true;
 }

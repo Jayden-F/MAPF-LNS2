@@ -4,7 +4,7 @@
 class LLNode // low-level node
 {
 public:
-	int location = 0;
+	int location = -1;
 	int g_val = 0;
 	int h_val = 0;
 	LLNode *parent = nullptr;
@@ -20,7 +20,7 @@ public:
 	struct compare_node
 	{
 		// returns true if n1 > n2 (note -- this gives us *min*-heap).
-		bool operator()(const LLNode *n1, const LLNode *n2) const
+		inline bool operator()(const LLNode *n1, const LLNode *n2) const
 		{
 			if (n1->g_val + n1->h_val == n2->g_val + n2->h_val)
 			{
@@ -28,9 +28,9 @@ public:
 				{
 					return rand() % 2 == 0; // break ties randomly
 				}
-				return n1->h_val >= n2->h_val; // break ties towards smaller h_vals (closer to goal location)
+				return n1->h_val < n2->h_val; // break ties towards smaller h_vals (closer to goal location)
 			}
-			return n1->g_val + n1->h_val >= n2->g_val + n2->h_val;
+			return n1->g_val + n1->h_val < n2->g_val + n2->h_val;
 		}
 	}; // used by OPEN (heap) to compare nodes (top of the heap has min f-val, and then highest g-val)
 
@@ -56,10 +56,12 @@ public:
 	}; // used by FOCAL (heap) to compare nodes (top of the heap has min number-of-conflicts)
 
 	LLNode() {}
-	LLNode(int id) : id(id), label(-1), location(-1) {}
+	LLNode(int id) : id(id), label(-1), location(-1), priority_(UINT32_MAX) {}
 	LLNode(int location, int g_val, int h_val, LLNode *parent, int timestep, int num_of_conflicts) : location(location), g_val(g_val), h_val(h_val), parent(parent), timestep(timestep),
-																									 num_of_conflicts(num_of_conflicts), is_closed(false), label(-1), id(-1) {}
+																									 num_of_conflicts(num_of_conflicts), is_closed(false), label(-1), id(-1), priority_(UINT32_MAX) {}
 	LLNode(const LLNode &other) { copy(other); }
+	// LLNode(const LLNode &) = delete;
+
 	~LLNode() = default;
 
 	void copy(const LLNode &other)
@@ -75,12 +77,13 @@ public:
 		is_closed = other.is_closed;
 		label = other.label;
 		id = other.id;
+		priority_ = other.priority_;
 	}
 	inline int getFVal() const { return g_val + h_val; }
 
 	void reset()
 	{
-		location = 0;
+		location = -1;
 		g_val = 0;
 		h_val = 0;
 		parent = 0;
@@ -91,12 +94,25 @@ public:
 		is_closed = false;
 		label = -1;
 		id = -1;
+		priority_ = UINT32_MAX;
 	}
 
 	void close()
 	{
 		is_closed = true;
 	}
+
+	inline uint32_t
+	get_priority() const
+	{
+		return priority_;
+	}
+
+	inline void
+	set_priority(uint32_t priority) { priority_ = priority; }
+
+private:
+	uint32_t priority_;
 };
 
 std::ostream &operator<<(std::ostream &os, const LLNode &node);

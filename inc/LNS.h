@@ -12,6 +12,7 @@
 #include "winpibt.h"
 #include "MemoryPool.h"
 #include "SIPPInterval.h"
+#include "pqueue.h"
 
 enum destroy_heuristic
 {
@@ -39,6 +40,7 @@ public:
     int planning_period = 0;
     MemoryPool memory_pool;
     SIPPIntervals sipp_intervals;
+    pqueue_min open;
 
     LNS(const Instance &instance, double time_limit,
         const string &init_algo_name, const string &replan_algo_name, const string &destory_name,

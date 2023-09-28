@@ -458,7 +458,7 @@ bool LNS::runWinPP()
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                      << "Agent " << agents[id].id << endl;
 
-            agents[id].path = agents[id].path_planner->findPath(sipp_intervals, memory_pool, current_timestep, planning_horizon);
+            agents[id].path = agents[id].path_planner->findPath(open, sipp_intervals, memory_pool, current_timestep, planning_horizon);
 
             if (agents[id].path.empty())
             {

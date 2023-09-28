@@ -5,6 +5,7 @@
 #include "SIPPNode.h"
 #include "MemoryPool.h"
 #include "common.h"
+#include "pqueue.h"
 
 class SIPP : public SingleAgentSolver
 {
@@ -18,9 +19,9 @@ public:
 	Path findOptimalPath(const HLNode &node, const ConstraintTable &initial_constraints,
 						 const vector<Path *> &paths, int agent, int lowerbound);
 	pair<Path, int> findSuboptimalPath(const HLNode &node, const ConstraintTable &initial_constraints,
-									   const vector<Path *> &paths, int agent, int lowerbound, double w);						   // return the path and the lowerbound
-	Path findPath(const ConstraintTable &constraint_table, int depth_limit = MAX_TIMESTEP);										   // return A path that minimizes collisions, breaking ties by cost
-	Path findPath(SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start_timestep = 0, int depth_limit = MAX_TIMESTEP); // return A path that minimizes collisions, breaking ties by cost
+									   const vector<Path *> &paths, int agent, int lowerbound, double w);											 // return the path and the lowerbound
+	Path findPath(const ConstraintTable &constraint_table, int depth_limit = MAX_TIMESTEP);															 // return A path that minimizes collisions, breaking ties by cost
+	Path findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool &memory_pool, int start_timestep = 0, int depth_limit = MAX_TIMESTEP); // return A path that minimizes collisions, breaking ties by cost
 
 	int getTravelTime(int start, int end, const ConstraintTable &constraint_table, int upper_bound);
 
@@ -32,9 +33,9 @@ private:
 	// define typedefs and handles for heap
 	typedef boost::heap::pairing_heap<SIPPNode *, boost::heap::compare<LLNode::compare_node>> heap_open_t;
 	typedef boost::heap::pairing_heap<SIPPNode *, boost::heap::compare<LLNode::secondary_compare_node>> heap_focal_t;
+
 	heap_open_t open_list;
 	heap_focal_t focal_list;
-
 	// define typedef for hash_map
 	typedef boost::unordered_map<SIPPNode *, list<SIPPNode *>, SIPPNode::NodeHasher, SIPPNode::eqnode> hashtable_t;
 	hashtable_t allNodes_table;
@@ -51,6 +52,6 @@ private:
 	void updateFocalList();
 	void releaseNodes();
 	bool dominanceCheck(SIPPNode *new_node);
-	bool dominanceCheck(int id, SIPPNode *new_node, MemoryPool &memory_pool);
+	bool dominanceCheck(pqueue_min &open, int id, SIPPNode *new_node, MemoryPool &memory_pool);
 	void printSearchTree() const;
 };
