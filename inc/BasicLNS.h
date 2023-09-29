@@ -8,7 +8,6 @@ struct Agent
     int id;
     SingleAgentSolver *path_planner = nullptr; // start, goal, and heuristics are stored in the path planner
     Path path;
-    bool at_goal = false;
 
     Agent(const Instance &instance, int id, bool sipp) : id(id)
     {

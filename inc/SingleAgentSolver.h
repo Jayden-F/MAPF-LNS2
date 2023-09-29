@@ -22,6 +22,7 @@ public:
 	int agent_id;
 	int start_location;
 	int goal_location;
+	bool at_goal;
 	vector<int> my_heuristic;					  // this is the precomputed heuristic for this agent
 	int compute_heuristic(int from, int to) const // compute admissible heuristic between two locations
 	{
@@ -59,7 +60,7 @@ public:
 
 	SingleAgentSolver(const Instance &instance, int agent) : instance(instance), agent_id(agent),
 															 start_location(instance.start_locations[agent]),
-															 goal_location(instance.goal_locations[agent])
+															 goal_location(instance.goal_locations[agent]), at_goal(false)
 	{
 		compute_heuristics();
 	}
@@ -76,6 +77,7 @@ public:
 		num_expanded = 0;
 		num_generated = 0;
 		num_reopened = 0;
+		at_goal = false;
 	}
 
 protected:

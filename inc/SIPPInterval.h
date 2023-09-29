@@ -30,11 +30,25 @@ public:
     inline const SIPPInterval *get_interval(int location, int index) { return &intervals_[location][index]; }
     void insert_path(int agent_id, vector<PathEntry> &path, int start = 0, int horizon = MAX_TIMESTEP);
     void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0, int horizon = MAX_TIMESTEP);
+    void reserve_goal(int agent_id, int location, int timestep);
     void cleared_intervals(int timestep) const
     {
         for (int i = 0; i < intervals_.size(); i++)
             for (int j = 0; j < intervals_[i].size(); j++)
                 assert(intervals_[i][j].high <= timestep || intervals_[i][j].agent_id == NO_AGENT);
+    }
+    void agent_removed(int agent_id)
+    {
+        for (int location = 0; location < intervals_.size(); location++)
+        {
+            for (int interval = 0; interval < intervals_[location].size(); interval++)
+            {
+                if (intervals_[location][interval].agent_id == agent_id)
+                {
+                    cout << "agent " << agent_id << " is not removed from the location " << location << " [" << intervals_[location][interval].low << "," << intervals_[location][interval].high << endl;
+                }
+            }
+        }
     }
 
 private:

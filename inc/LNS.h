@@ -40,7 +40,7 @@ public:
     int planning_period = 0;
     MemoryPool memory_pool;
     SIPPIntervals sipp_intervals;
-    pqueue_min open;
+    pqueue_min open_list;
 
     LNS(const Instance &instance, double time_limit,
         const string &init_algo_name, const string &replan_algo_name, const string &destory_name,

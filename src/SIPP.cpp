@@ -201,10 +201,11 @@ Path SIPP::findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool 
         assert(curr->location >= 0);
         // check if the popped node is a goal
 
-        if (curr->location == goal_location && curr->interval->high > start_timestep + depth_limit)
+        if (curr->location == goal_location && curr->interval->high == MAX_TIMESTEP)
         {
             updatePath(curr, path, start_timestep);
             path.resize(depth_limit + 1, path.back());
+            at_goal = true;
             break;
         }
         else if (curr->g_val >= start_timestep + depth_limit)
