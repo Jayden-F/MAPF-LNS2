@@ -30,6 +30,7 @@ public:
     inline const SIPPInterval *get_interval(int location, int index) { return &intervals_[location][index]; }
     void insert_path(int agent_id, vector<PathEntry> &path, int start = 0, int horizon = MAX_TIMESTEP);
     void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0, int horizon = MAX_TIMESTEP);
+    void unreserve_goal(int agent_id, int location, int timestep);
     void reserve_goal(int agent_id, int location, int timestep);
     void cleared_intervals(int timestep) const
     {
@@ -54,7 +55,7 @@ public:
 private:
     void init_location(int location) { intervals_[location].emplace_back(0, MAX_TIMESTEP); }
     void split(int agent_id, int location, int low, int high);
-    void merge(int location, int low);
+    void merge(int agent_id, int location, int low, int high);
     void truncate(int agent_id, int location, int timestep);
     void validate(int location) const;
 

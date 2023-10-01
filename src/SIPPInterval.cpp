@@ -68,28 +68,52 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
         }
         high++;
     }
-#ifdef DEBUG_MODE
-    cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
-#endif
-    this->split(agent_id, location, low, high);
+    // #ifdef DEBUG_MODE
+    //     cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
+    // #endif
+    //     this->split(agent_id, location, low, high);
+    // this->reserve_goal(agent_id, location, low);
 }
 
 void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start, int period, int horizon)
 {
-    int location = path[period].location;
-    this->truncate(agent_id, location, start + period);
+    if (period >= path.size())
+        return;
+    // truncate first location as might be shared with previous window.
+    this->truncate(agent_id, path[period].location, start + period);
 
+    int location = path[period + 1].location;
+    int low(start + period + 1);  // Low timestep of interval
+    int high(start + period + 1); // High timestep of interval
+    // t path index
     for (int t = period + 1; t < path.size() && t <= horizon; t++)
     {
-        if (location != path[t].location)
+        if (location != path[t].location || t == path.size() - 1)
         {
 #ifdef DEBUG_MODE
-            cout << agent_id << " merging: " << path[t].location << " @ [" << start + t << "," << start + t + 1 << ")" << endl;
+            cout << agent_id << " merging: " << location << " @ [" << low << "," << high << ")" << endl;
 #endif
-            this->merge(path[t].location, start + t);
+            this->merge(agent_id, location, low, high);
+            low = high;
             location = path[t].location;
         }
+        high++;
     }
+    // this->split(agent_id, location, low, high);
+}
+
+void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
+{
+    int index = this->binary_search(location, timestep);
+
+    if (intervals_[location][index - 1].agent_id == NO_AGENT)
+    {
+        intervals_[location][index - 1].high = MAX_TIMESTEP;
+        intervals_[location].erase(intervals_[location].end() - 1);
+        return;
+    }
+
+    intervals_[location][index].agent_id = NO_AGENT;
 }
 
 void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
@@ -285,7 +309,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     exit(1);
 }
 
-void SIPPIntervals::merge(int location, int low)
+void SIPPIntervals::merge(int agent_id, int location, int low, int high)
 {
 #ifdef DEBUG_MODE
     this->validate(location);
@@ -293,8 +317,16 @@ void SIPPIntervals::merge(int location, int low)
 
     assert(!intervals_[location].empty());
     int index = this->binary_search(location, low);
-    if (intervals_[location][index].agent_id == NO_AGENT)
+    if (intervals_[location][index].agent_id != agent_id ||
+        intervals_[location][index].low != low ||
+        intervals_[location][index].high != high)
+    {
+        // print that intervals do not match
+        cerr << "ERROR: merge failed " << endl;
+        cerr << "Proposed Interval: [" << low << "," << high << "):" << agent_id << endl;
+        cerr << "Current Interval: [" << intervals_[location][index].low << "," << intervals_[location][index].high << "):" << intervals_[location][index].agent_id << endl;
         return;
+    }
 
     // Two Neighbouring Safe Intervals
     if (index > 0 &&

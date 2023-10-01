@@ -155,6 +155,8 @@ bool LNS::run()
             if (replan_algo_name == "winPP")
             {
                 sipp_intervals.remove_path(neighbor.agents[i], agents[neighbor.agents[i]].path);
+                sipp_intervals.unreserve_goal(neighbor.agents[i], agents[neighbor.agents[i]].path.back().location, agents[neighbor.agents[i]].path.size());
+                sipp_intervals.agent_removed(neighbor.agents[i]);
             }
         }
 
@@ -465,6 +467,7 @@ bool LNS::runWinPP()
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
                               {const Agent& agent = agents[id]; return !agent.path_planner->at_goal && agents[id].path_planner->start_location == agents[id].path_planner->goal_location; });
 
+        // sipp_intervals.cleared_intervals(current_timestep);
         while (p != shuffled_agents.end())
         {
             int id = *p;
@@ -520,7 +523,7 @@ bool LNS::runWinPP()
                 if (agents[id].path_planner->at_goal && agents[id].path_planner->start_location == agents[id].path_planner->goal_location)
                     num_agents_at_goal++;
 
-                sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period);
+                sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period, planning_horizon);
             }
 
             if (screen >= 2)
@@ -551,7 +554,7 @@ bool LNS::runWinPP()
             agents[id].path_planner->start_location = accumulated_paths[id].at(0).location;
             agents[id].path = accumulated_paths[id];
             neighbor.sum_of_costs += agents[id].path.size() - 1;
-            sipp_intervals.reserve_goal(agents[id].id, agents[id].path.back().location, agents[id].path.size() - 1);
+            sipp_intervals.reserve_goal(agents[id].id, agents[id].path.back().location, agents[id].path.size());
         }
 
         if (neighbor.sum_of_costs <= neighbor.old_sum_of_costs) // accept new paths
@@ -564,6 +567,8 @@ bool LNS::runWinPP()
     for (int id : neighbor.agents)
     {
         sipp_intervals.remove_path(agents[id].id, agents[id].path);
+        sipp_intervals.unreserve_goal(agents[id].id, agents[id].path.back().location, agents[id].path.size());
+        sipp_intervals.agent_removed(agents[id].id);
     }
 
     if (!neighbor.old_paths.empty())
@@ -571,8 +576,9 @@ bool LNS::runWinPP()
         for (int id = 0; id < neighbor.agents.size(); id++)
         {
             agents[neighbor.agents[id]].path = neighbor.old_paths[id];
+            agents[neighbor.agents[id]].path_planner->start_location = agents[neighbor.agents[id]].path.at(0).location;
             sipp_intervals.insert_path(neighbor.agents[id], agents[neighbor.agents[id]].path);
-            sipp_intervals.reserve_goal(neighbor.agents[id], agents[neighbor.agents[id]].path.back().location, agents[neighbor.agents[id]].path.size() - 1);
+            sipp_intervals.reserve_goal(neighbor.agents[id], agents[neighbor.agents[id]].path.back().location, agents[neighbor.agents[id]].path.size());
         }
 
         neighbor.sum_of_costs = neighbor.old_sum_of_costs;
