@@ -57,7 +57,7 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
 
     for (int t = 0; t < path.size() && t <= horizon; t++)
     {
-        if (location != path[t].location || t == path.size() - 1)
+        if (location != path[t].location || t == min((int)path.size() - 1, horizon))
         {
 #ifdef DEBUG_MODE
             cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
@@ -88,7 +88,7 @@ void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start
     // t path index
     for (int t = period + 1; t < path.size() && t <= horizon; t++)
     {
-        if (location != path[t].location || t == path.size() - 1)
+        if (location != path[t].location || t == min((int)path.size() - 1, horizon))
         {
 #ifdef DEBUG_MODE
             cout << agent_id << " merging: " << location << " @ [" << low << "," << high << ")" << endl;
@@ -217,6 +217,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
 #endif
 
     int interval_index = this->binary_search(location, low);
+
     assert(intervals_[location][interval_index].agent_id == NO_AGENT);
 
     // Merge with previous interval removing current interval
@@ -317,14 +318,12 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
 
     assert(!intervals_[location].empty());
     int index = this->binary_search(location, low);
+
+    // Interval already removed by truncation
     if (intervals_[location][index].agent_id != agent_id ||
         intervals_[location][index].low != low ||
         intervals_[location][index].high != high)
     {
-        // print that intervals do not match
-        cerr << "ERROR: merge failed " << endl;
-        cerr << "Proposed Interval: [" << low << "," << high << "):" << agent_id << endl;
-        cerr << "Current Interval: [" << intervals_[location][index].low << "," << intervals_[location][index].high << "):" << intervals_[location][index].agent_id << endl;
         return;
     }
 

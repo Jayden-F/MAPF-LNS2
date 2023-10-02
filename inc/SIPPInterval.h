@@ -74,14 +74,16 @@ private:
             else if (intervals_[location][mid].low > timestep)
                 right = mid - 1;
             else
-            {
-                assert(intervals_[location][mid].low <= timestep && intervals_[location][mid].high > timestep);
                 return mid;
-            }
         }
 
+#ifdef DEBUG_MODE
         this->validate(location);
         cerr << "ERROR: binary_search failed to find interval " << timestep << endl;
+#endif
         return -1;
     }
 };
+
+// Iteration 23, group size = 3, solution cost = 80279, remaining time = 594.479
+// Find a target conflict where agent 27(of length 2772)traverses agent 17(of length 1037)'s target location 214014 at timestep 1180
