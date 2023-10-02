@@ -104,12 +104,19 @@ void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start
 
 void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
 {
+#ifdef DEBUG_MODE
+    this->validate(location);
+#endif
     int index = this->binary_search(location, timestep);
 
     if (intervals_[location][index - 1].agent_id == NO_AGENT)
     {
         intervals_[location][index - 1].high = MAX_TIMESTEP;
         intervals_[location].erase(intervals_[location].end() - 1);
+#ifdef DEBUG_MODE
+        cout << "agent: " << agent_id << " removing reservation on goal location: " << location << endl;
+        this->validate(location);
+#endif
         return;
     }
 
@@ -119,18 +126,51 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
 void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
 {
     assert(!intervals_[location].empty());
-    // assert(intervals_[location][intervals_[location].size() - 2].agent_id == agent_id);
-    // assert(intervals_[location][intervals_[location].size() - 1].agent_id == NO_AGENT);
+
+#ifdef DEBUG_MODE
+    cout << "agent: " << agent_id << " reservation on goal location: " << location << endl;
+    this->validate(location);
+#endif
 
     if (intervals_[location].size() == 1)
     {
         intervals_[location][0].high = timestep;
         intervals_[location].emplace_back(timestep, MAX_TIMESTEP, agent_id);
+#ifdef DEBUG_MODE
+        this->validate(location);
+#endif
         return;
     }
 
-    intervals_[location][intervals_[location].size() - 2].high = MAX_TIMESTEP;
-    intervals_[location].erase(intervals_[location].end() - 1);
+    int index = this->binary_search(location, timestep);
+
+    if (intervals_[location][index].agent_id == agent_id)
+    {
+        intervals_[location][index].high = MAX_TIMESTEP;
+        intervals_[location].erase(intervals_[location].end() - 1);
+#ifdef DEBUG_MODE
+        this->validate(location);
+#endif
+        return;
+    }
+
+    if (index - 1 >= 0 &&
+        intervals_[location][index].agent_id == NO_AGENT &&
+        intervals_[location][index - 1].agent_id == agent_id)
+    {
+        intervals_[location][index - 1].high = MAX_TIMESTEP;
+        intervals_[location].pop_back();
+#ifdef DEBUG_MODE
+        this->validate(location);
+#endif
+        return;
+    }
+
+    this->split(agent_id, location, timestep, MAX_TIMESTEP);
+    // cout << "Error" << agent_id << "failed to create reservation at goal location" << location << endl;
+#ifdef DEBUG_MODE
+    this->validate(location);
+#endif
 }
 
 void SIPPIntervals::truncate(int agent_id, int location, int timestep)
@@ -418,6 +458,11 @@ void SIPPIntervals::validate(int location) const
         }
     }
 
+    if (intervals_[location].back().low >= intervals_[location].back().high)
+    {
+        cerr << "ERROR: interval " << intervals_[location].size() - 1 << " has low >= high" << endl;
+        exit(1);
+    }
     if (intervals_[location].back().high != MAX_TIMESTEP)
     {
         cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;

@@ -156,7 +156,9 @@ bool LNS::run()
             {
                 sipp_intervals.remove_path(neighbor.agents[i], agents[neighbor.agents[i]].path);
                 sipp_intervals.unreserve_goal(neighbor.agents[i], agents[neighbor.agents[i]].path.back().location, agents[neighbor.agents[i]].path.size());
+#ifdef DEBUG_MODE
                 sipp_intervals.agent_removed(neighbor.agents[i]);
+#endif
             }
         }
 
@@ -568,7 +570,9 @@ bool LNS::runWinPP()
     {
         sipp_intervals.remove_path(agents[id].id, agents[id].path);
         sipp_intervals.unreserve_goal(agents[id].id, agents[id].path.back().location, agents[id].path.size());
+#ifdef DEBUG_MODE
         sipp_intervals.agent_removed(agents[id].id);
+#endif
     }
 
     if (!neighbor.old_paths.empty())
