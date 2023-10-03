@@ -46,7 +46,7 @@ const vector<int> SIPPIntervals::get_intervals(int from, int interval, int times
     return clear_intervals_;
 }
 
-void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start, int horizon)
+void SIPPIntervals::insert_path(int agent_id, Path &path, int start, int horizon)
 {
     if (path.empty())
         return;
@@ -75,7 +75,7 @@ void SIPPIntervals::insert_path(int agent_id, vector<PathEntry> &path, int start
     // this->reserve_goal(agent_id, location, low);
 }
 
-void SIPPIntervals::remove_path(int agent_id, vector<PathEntry> &path, int start, int period, int horizon)
+void SIPPIntervals::remove_path(int agent_id, Path &path, int start, int period, int horizon)
 {
     if (period >= path.size())
         return;

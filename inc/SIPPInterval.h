@@ -28,8 +28,8 @@ public:
     const int get_first_interval(int location, int start_time = 0);
     const vector<int> get_intervals(int from, int interval, int timestep, int to);
     inline const SIPPInterval *get_interval(int location, int index) { return &intervals_[location][index]; }
-    void insert_path(int agent_id, vector<PathEntry> &path, int start = 0, int horizon = MAX_TIMESTEP);
-    void remove_path(int agent_id, vector<PathEntry> &path, int start = 0, int period = 0, int horizon = MAX_TIMESTEP);
+    void insert_path(int agent_id, Path &path, int start = 0, int horizon = MAX_TIMESTEP);
+    void remove_path(int agent_id, Path &path, int start = 0, int period = 0, int horizon = MAX_TIMESTEP);
     void unreserve_goal(int agent_id, int location, int timestep);
     void reserve_goal(int agent_id, int location, int timestep);
     void cleared_intervals(int timestep) const
