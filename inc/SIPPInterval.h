@@ -16,7 +16,8 @@ struct SIPPInterval
 
 class SIPPIntervals
 {
-    // public:
+public:
+    friend class TestSIPPInterval;
 
 private:
     vector<vector<SIPPInterval>> intervals_;
@@ -50,6 +51,11 @@ public:
                 }
             }
         }
+    }
+    void clear()
+    {
+        for (int i = 0; i < intervals_.size(); i++)
+            intervals_[i].clear();
     }
 
 private:

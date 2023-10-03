@@ -469,7 +469,7 @@ bool LNS::runWinPP()
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
                               {const Agent& agent = agents[id]; return !agent.path_planner->at_goal && agents[id].path_planner->start_location == agents[id].path_planner->goal_location; });
 
-        sipp_intervals.cleared_intervals(current_timestep);
+        // sipp_intervals.cleared_intervals(current_timestep);
         while (p != shuffled_agents.end())
         {
             int id = *p;

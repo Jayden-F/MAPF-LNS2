@@ -8,6 +8,7 @@ IF(NOT CMAKE_BUILD_TYPE)
 ENDIF()
 
 include_directories("inc" "inc/CBS" "inc/PIBT")
+
 file(GLOB SOURCES "src/*.cpp" "src/CBS/*.cpp" "src/PIBT/*.cpp")
 add_executable(lns ${SOURCES})
 
@@ -20,3 +21,6 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 include_directories( ${Boost_INCLUDE_DIRS} )
 target_link_libraries(lns ${Boost_LIBRARIES} Eigen3::Eigen)
+
+enable_testing()
+add_subdirectory(tests)

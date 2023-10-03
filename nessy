@@ -26,31 +26,24 @@ fi
 CMAKE_FLAGS=("-DCMAKE_EXPORT_COMPILE_COMMANDS=1")
 case "$FLAVOUR" in
     fast)
-        echo "fast"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE")
         ;;
     fastsym)
-        echo "fastsym"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-g")
         ;;
     fastdebug)
-        echo "fastdebug"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-DDEBUG_MODE")
         ;;
     debug)
-        echo "debug"
-        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-DDEBUG_MODE")
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG")
         ;;
     ubsan)
-        echo "ubsan"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=undefined")
         ;;
     asan)
-        echo "asan"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=address -D_GLIBCXX_DEBUG -DDEBUG_MODE")
         ;;
     tsan)
-        echo  "tsan"
         CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=thread")
         ;;
 esac
@@ -80,7 +73,7 @@ case "$ACTION" in
         compiledb make -j "$CONCURRENCY" dev main convert extras test
         ;;
     clean)
-        rm -rf build/*
+        rm -r build
         ;;
     clobber)
         make clobber

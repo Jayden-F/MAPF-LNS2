@@ -20,5 +20,4 @@ _deps
 /scen-even
 .vscode
 build
-CMakeLists.txt
 .cache/
