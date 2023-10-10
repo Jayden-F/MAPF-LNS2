@@ -487,7 +487,7 @@ bool LNS::runWinPP()
                 while (rp != p)
                 {
                     int r_id = *rp;
-                    sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep);
+                    sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep, 0, planning_horizon);
                     ++rp;
                 }
                 if (screen >= 2)
@@ -524,7 +524,6 @@ bool LNS::runWinPP()
                 agents[id].path_planner->start_location = agents[id].path[window_end_index].location;
                 if (agents[id].path_planner->at_goal && agents[id].path_planner->start_location == agents[id].path_planner->goal_location)
                     num_agents_at_goal++;
-
                 sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period, planning_horizon);
             }
 

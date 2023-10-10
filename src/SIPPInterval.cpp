@@ -121,6 +121,11 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
     }
 
     intervals_[location][index].agent_id = NO_AGENT;
+
+#ifdef DEBUG_MODE
+    cout << "agent: " << agent_id << " removing reservation on goal location: " << location << endl;
+    this->validate(location);
+#endif
 }
 
 void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
@@ -181,6 +186,10 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
 #endif
 
     int index = this->binary_search(location, timestep);
+    if (intervals_[location][index].agent_id != agent_id)
+    {
+        return;
+    }
 
     int length = intervals_[location][index].high - intervals_[location][index].low;
 
@@ -360,12 +369,13 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
     int index = this->binary_search(location, low);
 
     // Interval already removed by truncation
-    if (intervals_[location][index].agent_id != agent_id ||
-        intervals_[location][index].low != low ||
-        intervals_[location][index].high != high)
-    {
+    if (intervals_[location][index].agent_id != agent_id)
         return;
-    }
+    //     intervals_[location][index].low != low ||
+    //     intervals_[location][index].high != high)
+    // {
+    //     return;
+    // }
 
     // Two Neighbouring Safe Intervals
     if (index > 0 &&
