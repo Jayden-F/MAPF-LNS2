@@ -483,6 +483,12 @@ bool LNS::runWinPP()
             // Agent unable to find a path for window
             if (agents[id].path.empty())
             {
+                if (screen >= 2)
+                {
+                    cout << "Agent Failed: " << agents[id].id << endl;
+                    sipp_intervals.validate(agents[id].path_planner->start_location);
+                }
+
                 auto rp = shuffled_agents.begin();
                 while (rp != p)
                 {
@@ -490,8 +496,6 @@ bool LNS::runWinPP()
                     sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep, 0, planning_horizon);
                     ++rp;
                 }
-                if (screen >= 2)
-                    cout << "Agent Failed: " << agents[id].id << endl;
 
                 std::rotate(shuffled_agents.begin(), p, p + 1);
                 random_begin = shuffled_agents.end();

@@ -57,13 +57,13 @@ public:
         for (int i = 0; i < intervals_.size(); i++)
             intervals_[i].clear();
     }
+    void validate(int location) const;
 
 private:
     void init_location(int location) { intervals_[location].emplace_back(0, MAX_TIMESTEP); }
     void split(int agent_id, int location, int low, int high);
     void merge(int agent_id, int location, int low, int high);
     void truncate(int agent_id, int location, int timestep);
-    void validate(int location) const;
 
     inline int
     binary_search(int location, int timestep) const
