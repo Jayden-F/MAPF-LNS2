@@ -38,7 +38,8 @@ const vector<int> SIPPIntervals::get_intervals(int from, int interval, int times
             interval + 1 < intervals_[from].size() &&
             intervals_[to][i - 1].agent_id != NO_AGENT &&
             intervals_[from][interval + 1].agent_id != NO_AGENT &&
-            intervals_[to][i - 1].agent_id == intervals_[from][interval + 1].agent_id)
+            intervals_[to][i - 1].agent_id == intervals_[from][interval + 1].agent_id &&
+            intervals_[from][interval + 1].low - intervals_[to][i].low <= 1)
             continue;
 
         clear_intervals_.push_back(i);
