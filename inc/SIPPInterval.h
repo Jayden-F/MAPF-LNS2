@@ -48,6 +48,7 @@ public:
                 if (intervals_[location][interval].agent_id == agent_id)
                 {
                     cout << "agent " << agent_id << " is not removed from the location " << location << " [" << intervals_[location][interval].low << "," << intervals_[location][interval].high << endl;
+                    exit(1);
                 }
             }
         }

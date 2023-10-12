@@ -31,17 +31,20 @@ const vector<int> SIPPIntervals::get_intervals(int from, int interval, int times
     {
         // Vertex Conflict
         if (intervals_[to][i].agent_id != NO_AGENT)
+        {
             continue;
-
+        }
         // Edge Conflict
-        if (i - 1 >= 0 &&
+        if (
+            i - 1 >= 0 &&
             interval + 1 < intervals_[from].size() &&
             intervals_[to][i - 1].agent_id != NO_AGENT &&
             intervals_[from][interval + 1].agent_id != NO_AGENT &&
             intervals_[to][i - 1].agent_id == intervals_[from][interval + 1].agent_id &&
             intervals_[from][interval].high == intervals_[to][i].low)
+        {
             continue;
-
+        }
         clear_intervals_.push_back(i);
     }
     return clear_intervals_;
@@ -106,7 +109,8 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
 #endif
     int index = this->binary_search(location, timestep);
 
-    if (intervals_[location][index - 1].agent_id == NO_AGENT)
+    if (index > 0 &&
+        intervals_[location][index - 1].agent_id == NO_AGENT)
     {
         intervals_[location][index - 1].high = MAX_TIMESTEP;
         intervals_[location].erase(intervals_[location].end() - 1);
@@ -156,7 +160,7 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
         return;
     }
 
-    if (index - 1 >= 0 &&
+    if (index > 0 &&
         intervals_[location][index].agent_id == NO_AGENT &&
         intervals_[location][index - 1].agent_id == agent_id)
     {
@@ -182,7 +186,6 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     this->validate(location);
 #endif
 
-    
     int index = this->binary_search(location, timestep);
     if (intervals_[location][index].agent_id != agent_id)
     {
@@ -204,7 +207,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     }
 
     // Remove interval entirely
-    if (index >= 1 &&
+    if (index > 0 &&
         intervals_[location][index - 1].agent_id == NO_AGENT &&
         intervals_[location][index + 1].agent_id == NO_AGENT)
     {
@@ -218,7 +221,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     }
 
     // Merge with previous interval if it is safe
-    if (index >= 1 &&
+    if (index > 0 &&
         intervals_[location][index - 1].agent_id == NO_AGENT)
     {
         intervals_[location][index - 1].high = intervals_[location][index].high;
@@ -265,7 +268,11 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
 
     int interval_index = this->binary_search(location, low);
 
-    assert(intervals_[location][interval_index].agent_id == NO_AGENT);
+    if (intervals_[location][interval_index].agent_id != NO_AGENT)
+    {
+        cout << "ERROR: interval already allocated" << endl;
+        exit(1);
+    }
 
     // Merge with previous interval removing current interval
     // [1246,1250): 83, [1250,1251): -1 , [1251,1252): 12
@@ -340,6 +347,12 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     if (intervals_[location][interval_index].low < low &&
         intervals_[location][interval_index].high > high)
     {
+        if (interval_index >= (int)intervals_[location].size())
+        {
+            cout << "ERROR: interval index out of bounds shits fucked table flip" << endl;
+            exit(1);
+        }
+
         int new_high = intervals_[location][interval_index].high;
         intervals_[location][interval_index].high = low;
         intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, high, new_high, NO_AGENT);
@@ -362,6 +375,8 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
 #ifdef DEBUG_MODE
     this->validate(location);
 #endif
+
+    // auto& intervals = intervals_[location];
 
     assert(!intervals_[location].empty());
     int index = this->binary_search(location, low);
