@@ -270,7 +270,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
 
     if (intervals_[location][interval_index].agent_id != NO_AGENT)
     {
-        cout << "ERROR: interval already allocated" << endl;
+        cout << "ERROR: Agent " << agent_id << " interval already allocated to " << intervals_[location][interval_index].agent_id << endl;
         exit(1);
     }
 

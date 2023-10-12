@@ -444,12 +444,6 @@ bool LNS::runWinPP()
         exit(1);
     }
 
-    for (int id : neighbor.agents)
-    {
-        cout << id << ", ";
-    }
-    cout << endl;
-
     int planning_phases = 0;
     int current_timestep = 0;
     std::vector<int> shuffled_agents = neighbor.agents;
