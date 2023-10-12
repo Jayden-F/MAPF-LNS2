@@ -39,7 +39,7 @@ const vector<int> SIPPIntervals::get_intervals(int from, int interval, int times
             intervals_[to][i - 1].agent_id != NO_AGENT &&
             intervals_[from][interval + 1].agent_id != NO_AGENT &&
             intervals_[to][i - 1].agent_id == intervals_[from][interval + 1].agent_id &&
-            intervals_[from][interval + 1].low - intervals_[to][i].low <= 1)
+            intervals_[from][interval].high == intervals_[to][i].low)
             continue;
 
         clear_intervals_.push_back(i);
@@ -56,9 +56,10 @@ void SIPPIntervals::insert_path(int agent_id, Path &path, int start, int horizon
     int low(start);
     int high(start);
 
-    for (int t = 0; t < path.size() && t <= horizon; t++)
+    int t_max = min((int)path.size() - 1, horizon);
+    for (int t = 0; t <= t_max; t++)
     {
-        if (location != path[t].location || t == min((int)path.size() - 1, horizon))
+        if (location != path[t].location || t == t_max)
         {
 #ifdef DEBUG_MODE
             cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
@@ -69,11 +70,6 @@ void SIPPIntervals::insert_path(int agent_id, Path &path, int start, int horizon
         }
         high++;
     }
-    // #ifdef DEBUG_MODE
-    //     cout << agent_id << " splitting: " << location << " @ [" << low << "," << high << ")" << endl;
-    // #endif
-    //     this->split(agent_id, location, low, high);
-    // this->reserve_goal(agent_id, location, low);
 }
 
 void SIPPIntervals::remove_path(int agent_id, Path &path, int start, int period, int horizon)
@@ -86,10 +82,11 @@ void SIPPIntervals::remove_path(int agent_id, Path &path, int start, int period,
     int location = path[period + 1].location;
     int low(start + period + 1);  // Low timestep of interval
     int high(start + period + 1); // High timestep of interval
-    // t path index
-    for (int t = period + 1; t < path.size() && t <= horizon; t++)
+
+    int t_max = min((int)path.size() - 1, horizon);
+    for (int t = period + 1; t <= t_max; t++)
     {
-        if (location != path[t].location || t == min((int)path.size() - 1, horizon))
+        if (location != path[t].location || t == t_max)
         {
 #ifdef DEBUG_MODE
             cout << agent_id << " merging: " << location << " @ [" << low << "," << high << ")" << endl;
@@ -100,7 +97,6 @@ void SIPPIntervals::remove_path(int agent_id, Path &path, int start, int period,
         }
         high++;
     }
-    // this->split(agent_id, location, low, high);
 }
 
 void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
@@ -186,6 +182,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     this->validate(location);
 #endif
 
+    
     int index = this->binary_search(location, timestep);
     if (intervals_[location][index].agent_id != agent_id)
     {
