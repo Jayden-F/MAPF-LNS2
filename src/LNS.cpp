@@ -147,7 +147,9 @@ bool LNS::run()
             neighbor.old_sum_of_costs += agents[neighbor.agents[i]].path.size() - 1;
 
             if (replan_algo_name == "PP" || replan_algo_name == "winPP")
+            {
                 neighbor.old_paths[i] = agents[neighbor.agents[i]].path;
+            }
 
             if (replan_algo_name == "PP")
                 path_table.deletePath(neighbor.agents[i], agents[neighbor.agents[i]].path);
@@ -156,10 +158,12 @@ bool LNS::run()
             {
                 sipp_intervals.remove_path(neighbor.agents[i], agents[neighbor.agents[i]].path);
                 sipp_intervals.unreserve_goal(neighbor.agents[i], agents[neighbor.agents[i]].path.back().location, agents[neighbor.agents[i]].path.size() - 1);
+
 #ifdef DEBUG_MODE
                 sipp_intervals.agent_removed(neighbor.agents[i]);
 #endif
             }
+            agents[neighbor.agents[i]].path.clear();
         }
 
         if (replan_algo_name == "EECBS")
@@ -545,6 +549,7 @@ bool LNS::runWinPP()
                     if (accumulated_paths[id][t].location != agents[id].path_planner->goal_location)
                     {
                         neighbor.sum_of_costs += t + 1;
+                        break;
                     }
                 }
             }

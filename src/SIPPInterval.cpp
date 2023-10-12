@@ -347,12 +347,6 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     if (intervals_[location][interval_index].low < low &&
         intervals_[location][interval_index].high > high)
     {
-        if (interval_index >= (int)intervals_[location].size())
-        {
-            cout << "ERROR: interval index out of bounds shits fucked table flip" << endl;
-            exit(1);
-        }
-
         int new_high = intervals_[location][interval_index].high;
         intervals_[location][interval_index].high = low;
         intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, high, new_high, NO_AGENT);
