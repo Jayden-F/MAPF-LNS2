@@ -456,6 +456,13 @@ bool LNS::runWinPP()
 
     neighbor.sum_of_costs = 0;
 
+    cout << "Agents: ";
+    for (int id : neighbor.agents)
+    {
+        cout << agents[id].id << ", ";
+    }
+    cout << endl;
+
     runtime = ((fsec)(Time::now() - start_time)).count();
     double T = time_limit - runtime; // time limit
     if (!iteration_stats.empty())
@@ -472,9 +479,9 @@ bool LNS::runWinPP()
         std::shuffle(random_begin, shuffled_agents.end(), *MT_S); // shuffle agents
                                                                   // reduce priority of agents on goal
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
-                              {const Agent& agent = agents[id]; return !agent.path_planner->at_goal && agents[id].path_planner->start_location == agents[id].path_planner->goal_location; });
-
-        // sipp_intervals.cleared_intervals(current_timestep);
+                              {const Agent& agent = agents[id];
+            return !(agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
+                     sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep)); });
 
         while (p != shuffled_agents.end())
         {
@@ -533,11 +540,16 @@ bool LNS::runWinPP()
                     accumulated_paths[id][planning_phases * planning_period + loc] = agents[id].path[loc];
 
                 // Move agent to next planning phase and check if at goal
-                agents[id].path_planner->start_location = agents[id].path[window_end_index].location;
-                if (agents[id].path_planner->at_goal && agents[id].path_planner->start_location == agents[id].path_planner->goal_location)
-                    num_agents_at_goal++;
                 sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period, planning_horizon);
+                // Check if agent is at goal
+                agents[id].path_planner->start_location = agents[id].path[window_end_index].location;
+                if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
+                    sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep + planning_period))
+                {
+                    num_agents_at_goal++;
+                }
 
+                // compute sum of costs to check if new plan is worse than old plan
                 for (int t = accumulated_paths[id].size() - 1; t >= 0; t--)
                 {
                     if (accumulated_paths[id][t].location != agents[id].path_planner->goal_location)

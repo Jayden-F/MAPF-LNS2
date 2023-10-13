@@ -134,7 +134,7 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
     assert(!intervals_[location].empty());
 
 #ifdef DEBUG_MODE
-    cout << "agent: " << agent_id << " reservation on goal location: " << location << endl;
+    cout << "agent: " << agent_id << " reservation on goal location: " << location << " at timestep:" << timestep << endl;
     this->validate(location);
 #endif
 

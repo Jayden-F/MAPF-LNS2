@@ -205,7 +205,6 @@ Path SIPP::findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool 
         {
             updatePath(curr, path, start_timestep);
             path.resize(depth_limit + 1, path.back());
-            at_goal = true;
             break;
         }
         else if (curr->g_val >= start_timestep + depth_limit)

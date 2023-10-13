@@ -27,6 +27,13 @@ public:
     // in the constructor initalise intervals_ with map_size
     SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(0) {}
     const int get_first_interval(int location, int start_time = 0);
+    bool is_location_clear(int location, int timestep)
+    {
+        auto &intervals = intervals_[location];
+        if (intervals.empty())
+            init_location(location);
+        return intervals.back().low <= timestep && intervals.back().agent_id == NO_AGENT;
+    }
     const vector<int> get_intervals(int from, int interval, int timestep, int to);
     inline const SIPPInterval *get_interval(int location, int index) { return &intervals_[location][index]; }
     void insert_path(int agent_id, Path &path, int start = 0, int horizon = MAX_TIMESTEP);
