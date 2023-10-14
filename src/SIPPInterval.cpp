@@ -5,12 +5,14 @@
 
 const int SIPPIntervals::get_first_interval(int location, int start_time)
 {
-    if (intervals_[location].empty())
+    auto &location_intervals = intervals_[location];
+
+    if (location_intervals.empty())
         this->init_location(location);
 
     int index(this->binary_search(location, start_time));
 
-    if (intervals_[location][index].agent_id != NO_AGENT)
+    if (location_intervals[index].agent_id != NO_AGENT)
         return -1;
 
     return index;
@@ -104,16 +106,19 @@ void SIPPIntervals::remove_path(int agent_id, Path &path, int start, int period,
 
 void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
 {
+
+    auto &location_intervals = intervals_[location];
+
 #ifdef DEBUG_MODE
     this->validate(location);
 #endif
     int index = this->binary_search(location, timestep);
 
     if (index > 0 &&
-        intervals_[location][index - 1].agent_id == NO_AGENT)
+        location_intervals[index - 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index - 1].high = MAX_TIMESTEP;
-        intervals_[location].erase(intervals_[location].end() - 1);
+        location_intervals[index - 1].high = MAX_TIMESTEP;
+        location_intervals.erase(location_intervals.end() - 1);
 #ifdef DEBUG_MODE
         cout << "agent: " << agent_id << " removing reservation on goal location: " << location << endl;
         this->validate(location);
@@ -121,7 +126,7 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
         return;
     }
 
-    intervals_[location][index].agent_id = NO_AGENT;
+    location_intervals[index].agent_id = NO_AGENT;
 
 #ifdef DEBUG_MODE
     cout << "agent: " << agent_id << " removing reservation on goal location: " << location << endl;
@@ -131,17 +136,20 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
 
 void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
 {
-    assert(!intervals_[location].empty());
+
+    auto &location_intervals = intervals_[location];
+
+    assert(!location_intervals.empty());
 
 #ifdef DEBUG_MODE
     cout << "agent: " << agent_id << " reservation on goal location: " << location << " at timestep:" << timestep << endl;
     this->validate(location);
 #endif
 
-    if (intervals_[location].size() == 1)
+    if (location_intervals.size() == 1)
     {
-        intervals_[location][0].high = timestep;
-        intervals_[location].emplace_back(timestep, MAX_TIMESTEP, agent_id);
+        location_intervals[0].high = timestep;
+        location_intervals.emplace_back(timestep, MAX_TIMESTEP, agent_id);
 #ifdef DEBUG_MODE
         this->validate(location);
 #endif
@@ -150,10 +158,10 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
 
     int index = this->binary_search(location, timestep);
 
-    if (intervals_[location][index].agent_id == agent_id)
+    if (location_intervals[index].agent_id == agent_id)
     {
-        intervals_[location][index].high = MAX_TIMESTEP;
-        intervals_[location].erase(intervals_[location].end() - 1);
+        location_intervals[index].high = MAX_TIMESTEP;
+        location_intervals.erase(location_intervals.end() - 1);
 #ifdef DEBUG_MODE
         this->validate(location);
 #endif
@@ -161,11 +169,11 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
     }
 
     if (index > 0 &&
-        intervals_[location][index].agent_id == NO_AGENT &&
-        intervals_[location][index - 1].agent_id == agent_id)
+        location_intervals[index].agent_id == NO_AGENT &&
+        location_intervals[index - 1].agent_id == agent_id)
     {
-        intervals_[location][index - 1].high = MAX_TIMESTEP;
-        intervals_[location].pop_back();
+        location_intervals[index - 1].high = MAX_TIMESTEP;
+        location_intervals.pop_back();
 #ifdef DEBUG_MODE
         this->validate(location);
 #endif
@@ -186,19 +194,21 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     this->validate(location);
 #endif
 
+    auto &location_intervals = intervals_[location];
+
     int index = this->binary_search(location, timestep);
-    if (intervals_[location][index].agent_id != agent_id)
+    if (location_intervals[index].agent_id != agent_id)
     {
         return;
     }
 
-    int length = intervals_[location][index].high - intervals_[location][index].low;
+    int length = location_intervals[index].high - location_intervals[index].low;
 
     // Interval early interval off at timestep
-    if (length > 1 && intervals_[location][index].low < timestep)
+    if (length > 1 && location_intervals[index].low < timestep)
     {
-        intervals_[location][index + 1].low = timestep;
-        intervals_[location][index].high = timestep;
+        location_intervals[index + 1].low = timestep;
+        location_intervals[index].high = timestep;
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -208,11 +218,11 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
 
     // Remove interval entirely
     if (index > 0 &&
-        intervals_[location][index - 1].agent_id == NO_AGENT &&
-        intervals_[location][index + 1].agent_id == NO_AGENT)
+        location_intervals[index - 1].agent_id == NO_AGENT &&
+        location_intervals[index + 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index - 1].high = intervals_[location][index + 1].high;
-        intervals_[location].erase(intervals_[location].begin() + index, intervals_[location].begin() + index + 2);
+        location_intervals[index - 1].high = location_intervals[index + 1].high;
+        location_intervals.erase(location_intervals.begin() + index, location_intervals.begin() + index + 2);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -222,10 +232,10 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
 
     // Merge with previous interval if it is safe
     if (index > 0 &&
-        intervals_[location][index - 1].agent_id == NO_AGENT)
+        location_intervals[index - 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index - 1].high = intervals_[location][index].high;
-        intervals_[location].erase(intervals_[location].begin() + index);
+        location_intervals[index - 1].high = location_intervals[index].high;
+        location_intervals.erase(location_intervals.begin() + index);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -234,11 +244,11 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     }
 
     // Merge with next interval if it is safe
-    if (intervals_[location][index + 1].agent_id == NO_AGENT)
+    if (location_intervals[index + 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index].agent_id = NO_AGENT;
-        intervals_[location][index].high = intervals_[location][index + 1].high;
-        intervals_[location].erase(intervals_[location].begin() + index + 1);
+        location_intervals[index].agent_id = NO_AGENT;
+        location_intervals[index].high = location_intervals[index + 1].high;
+        location_intervals.erase(location_intervals.begin() + index + 1);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -247,7 +257,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
     }
 
     // Allocate interval to No Agent
-    intervals_[location][index].agent_id = NO_AGENT;
+    location_intervals[index].agent_id = NO_AGENT;
 #ifdef DEBUG_MODE
     this->validate(location);
 #endif
@@ -257,7 +267,9 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep)
 void SIPPIntervals::split(int agent_id, int location, int low, int high)
 {
 
-    if (intervals_[location].empty())
+    auto &location_intervals = intervals_[location];
+
+    if (location_intervals.empty())
     {
         this->init_location(location);
     }
@@ -268,9 +280,9 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
 
     int interval_index = this->binary_search(location, low);
 
-    if (intervals_[location][interval_index].agent_id != NO_AGENT)
+    if (location_intervals[interval_index].agent_id != NO_AGENT)
     {
-        cout << "ERROR: Agent " << agent_id << " interval already allocated to " << intervals_[location][interval_index].agent_id << endl;
+        cout << "ERROR: Agent " << agent_id << " interval already allocated to " << location_intervals[interval_index].agent_id << endl;
         exit(1);
     }
 
@@ -278,12 +290,12 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     // [1246,1250): 83, [1250,1251): -1 , [1251,1252): 12
     // [1246,1251): 83, [1251,1252): 12
     if (interval_index > 0 &&
-        intervals_[location][interval_index].low == low &&
-        intervals_[location][interval_index - 1].agent_id == agent_id &&
-        intervals_[location][interval_index].high - intervals_[location][interval_index].low == 1)
+        location_intervals[interval_index].low == low &&
+        location_intervals[interval_index - 1].agent_id == agent_id &&
+        location_intervals[interval_index].high - location_intervals[interval_index].low == 1)
     {
-        intervals_[location][interval_index - 1].high = high;
-        intervals_[location].erase(intervals_[location].begin() + interval_index);
+        location_intervals[interval_index - 1].high = high;
+        location_intervals.erase(location_intervals.begin() + interval_index);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -295,11 +307,11 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     // [1246,1250): 83, [1250,1255): -1 , [1255,1252): 12
     // [1246,1251): 83, [1251,1255): -1 , [1255,1252): 12
     if (interval_index > 0 &&
-        intervals_[location][interval_index].low == low &&
-        intervals_[location][interval_index - 1].agent_id == agent_id)
+        location_intervals[interval_index].low == low &&
+        location_intervals[interval_index - 1].agent_id == agent_id)
     {
-        intervals_[location][interval_index - 1].high = high;
-        intervals_[location][interval_index].low = high;
+        location_intervals[interval_index - 1].high = high;
+        location_intervals[interval_index].low = high;
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -308,10 +320,10 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     }
 
     // Proposed interval matches current interval
-    if (intervals_[location][interval_index].high == high &&
-        intervals_[location][interval_index].low == low)
+    if (location_intervals[interval_index].high == high &&
+        location_intervals[interval_index].low == low)
     {
-        intervals_[location][interval_index].agent_id = agent_id;
+        location_intervals[interval_index].agent_id = agent_id;
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -320,10 +332,10 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     }
 
     // Interval shares a high interval
-    if (intervals_[location][interval_index].high == high)
+    if (location_intervals[interval_index].high == high)
     {
-        intervals_[location][interval_index].high = low;
-        intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
+        location_intervals[interval_index].high = low;
+        location_intervals.emplace(location_intervals.begin() + interval_index + 1, low, high, agent_id);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -332,10 +344,10 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     }
 
     // Interval shares a low interval
-    if (intervals_[location][interval_index].low == low)
+    if (location_intervals[interval_index].low == low)
     {
-        intervals_[location][interval_index].low = high;
-        intervals_[location].emplace(intervals_[location].begin() + interval_index, low, high, agent_id);
+        location_intervals[interval_index].low = high;
+        location_intervals.emplace(location_intervals.begin() + interval_index, low, high, agent_id);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -344,13 +356,13 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high)
     }
 
     // proposed interval is subset of found interval
-    if (intervals_[location][interval_index].low < low &&
-        intervals_[location][interval_index].high > high)
+    if (location_intervals[interval_index].low < low &&
+        location_intervals[interval_index].high > high)
     {
-        int new_high = intervals_[location][interval_index].high;
-        intervals_[location][interval_index].high = low;
-        intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, high, new_high, NO_AGENT);
-        intervals_[location].emplace(intervals_[location].begin() + interval_index + 1, low, high, agent_id);
+        int new_high = location_intervals[interval_index].high;
+        location_intervals[interval_index].high = low;
+        location_intervals.emplace(location_intervals.begin() + interval_index + 1, high, new_high, NO_AGENT);
+        location_intervals.emplace(location_intervals.begin() + interval_index + 1, low, high, agent_id);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -370,28 +382,23 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
     this->validate(location);
 #endif
 
-    // auto& intervals = intervals_[location];
+    auto &location_intervals = intervals_[location];
 
-    assert(!intervals_[location].empty());
+    assert(!location_intervals.empty());
     int index = this->binary_search(location, low);
 
     // Interval already removed by truncation
-    if (intervals_[location][index].agent_id != agent_id)
+    if (location_intervals[index].agent_id != agent_id)
         return;
-    //     intervals_[location][index].low != low ||
-    //     intervals_[location][index].high != high)
-    // {
-    //     return;
-    // }
 
     // Two Neighbouring Safe Intervals
     if (index > 0 &&
-        index < intervals_[location].size() - 1 &&
-        intervals_[location][index - 1].agent_id == NO_AGENT &&
-        intervals_[location][index + 1].agent_id == NO_AGENT)
+        index < location_intervals.size() - 1 &&
+        location_intervals[index - 1].agent_id == NO_AGENT &&
+        location_intervals[index + 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index - 1].high = intervals_[location][index + 1].high;
-        intervals_[location].erase(intervals_[location].begin() + index, intervals_[location].begin() + index + 2);
+        location_intervals[index - 1].high = location_intervals[index + 1].high;
+        location_intervals.erase(location_intervals.begin() + index, location_intervals.begin() + index + 2);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -403,10 +410,10 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
 
     // Early
     if (index > 0 &&
-        intervals_[location][index - 1].agent_id == NO_AGENT)
+        location_intervals[index - 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index - 1].high = intervals_[location][index].high;
-        intervals_[location].erase(intervals_[location].begin() + index);
+        location_intervals[index - 1].high = location_intervals[index].high;
+        location_intervals.erase(location_intervals.begin() + index);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -415,11 +422,11 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
     }
 
     // Late
-    if (index < intervals_[location].size() - 1 &&
-        intervals_[location][index + 1].agent_id == NO_AGENT)
+    if (index < location_intervals.size() - 1 &&
+        location_intervals[index + 1].agent_id == NO_AGENT)
     {
-        intervals_[location][index + 1].low = intervals_[location][index].low;
-        intervals_[location].erase(intervals_[location].begin() + index);
+        location_intervals[index + 1].low = location_intervals[index].low;
+        location_intervals.erase(location_intervals.begin() + index);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -428,7 +435,7 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high)
     }
 
     // No Neighbouring Safe Intervals
-    intervals_[location][index].agent_id = NO_AGENT;
+    location_intervals[index].agent_id = NO_AGENT;
 
 #ifdef DEBUG_MODE
     this->validate(location);
@@ -441,46 +448,47 @@ void SIPPIntervals::validate(int location) const
     cout << "   location: " << location << endl
          << "   ";
 
-    if (intervals_[location][0].low != 0)
+    auto &location_intervals = intervals_[location];
+    if (location_intervals[0].low != 0)
     {
         cerr << "ERROR: interval does not start at 0" << endl;
         exit(1);
     }
 
-    for (int i = 0; i < intervals_[location].size() - 1; i++)
-        cout << "[" << intervals_[location][i].low << "," << intervals_[location][i].high << "): " << intervals_[location][i].agent_id << " , ";
-    cout << "[" << intervals_[location].back().low << "," << intervals_[location].back().high << "): " << intervals_[location].back().agent_id << " " << endl;
+    for (int i = 0; i < location_intervals.size() - 1; i++)
+        cout << "[" << location_intervals[i].low << "," << location_intervals[i].high << "): " << location_intervals[i].agent_id << " , ";
+    cout << "[" << location_intervals.back().low << "," << location_intervals.back().high << "): " << location_intervals.back().agent_id << " " << endl;
 
-    for (int i = 0; i < intervals_[location].size() - 1; i++)
+    for (int i = 0; i < location_intervals.size() - 1; i++)
     {
-        if (intervals_[location][i].low >= intervals_[location][i].high)
+        if (location_intervals[i].low >= location_intervals[i].high)
         {
             cerr << "ERROR: interval " << i << " has low >= high" << endl;
             exit(1);
         }
-        if (intervals_[location][i].agent_id == intervals_[location][i + 1].agent_id)
+        if (location_intervals[i].agent_id == location_intervals[i + 1].agent_id)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " have the same agent_id" << endl;
             exit(1);
         }
-        if (intervals_[location][i].high > intervals_[location][i + 1].low)
+        if (location_intervals[i].high > location_intervals[i + 1].low)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " overlap" << endl;
             exit(1);
         }
-        if (intervals_[location][i].high != intervals_[location][i + 1].low)
+        if (location_intervals[i].high != location_intervals[i + 1].low)
         {
             cerr << "ERROR: interval " << i << " and " << i + 1 << " do not touch" << endl;
             exit(1);
         }
     }
 
-    if (intervals_[location].back().low >= intervals_[location].back().high)
+    if (location_intervals.back().low >= location_intervals.back().high)
     {
-        cerr << "ERROR: interval " << intervals_[location].size() - 1 << " has low >= high" << endl;
+        cerr << "ERROR: interval " << location_intervals.size() - 1 << " has low >= high" << endl;
         exit(1);
     }
-    if (intervals_[location].back().high != MAX_TIMESTEP)
+    if (location_intervals.back().high != MAX_TIMESTEP)
     {
         cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
         exit(1);

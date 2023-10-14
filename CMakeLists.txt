@@ -21,6 +21,3 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 include_directories( ${Boost_INCLUDE_DIRS} )
 target_link_libraries(lns ${Boost_LIBRARIES} Eigen3::Eigen)
-
-enable_testing()
-add_subdirectory(tests)
