@@ -583,6 +583,7 @@ bool LNS::runWinPP()
             {
                 if (accumulated_paths[id][time_step].location != agents[id].path_planner->goal_location)
                 {
+                    sipp_intervals.remove_path(agents[id].id, accumulated_paths[id], 0, time_step + 1);
                     accumulated_paths[id].resize(time_step + 2);
                     accumulated_paths[id].shrink_to_fit();
                     break;

@@ -180,7 +180,7 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
         return;
     }
 
-    // location is 
+    // location is
     if (location_intervals[index].low == timestep)
     {
         location_intervals[index].agent_id = agent_id;
