@@ -137,18 +137,29 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep)
 void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
 {
 
-    auto &location_intervals = intervals_[location];
-
-    assert(!location_intervals.empty());
-
 #ifdef DEBUG_MODE
     cout << "agent: " << agent_id << " reservation on goal location: " << location << " at timestep:" << timestep << endl;
-    this->validate(location);
 #endif
+    auto &location_intervals = intervals_[location];
 
-    if (location_intervals.size() == 1)
+    if (location_intervals.empty())
     {
-        location_intervals[0].high = timestep;
+        this->init_location(location);
+    }
+
+    if (!this->is_location_clear(location, timestep))
+    {
+        this->validate(location);
+        cout << "location cannot be reservered at timestep: " << timestep << " by agent: " << agent_id << endl;
+        exit(-1);
+    }
+
+    int index = location_intervals.size() - 1;
+
+    // location does not share timestep
+    if (location_intervals[index].low < timestep)
+    {
+        location_intervals[index].high = timestep;
         location_intervals.emplace_back(timestep, MAX_TIMESTEP, agent_id);
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -156,35 +167,32 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep)
         return;
     }
 
-    int index = this->binary_search(location, timestep);
-
-    if (location_intervals[index].agent_id == agent_id)
-    {
-        location_intervals[index].high = MAX_TIMESTEP;
-        location_intervals.erase(location_intervals.end() - 1);
-#ifdef DEBUG_MODE
-        this->validate(location);
-#endif
-        return;
-    }
-
+    // location is reserved by current agent extending reservation
     if (index > 0 &&
-        location_intervals[index].agent_id == NO_AGENT &&
-        location_intervals[index - 1].agent_id == agent_id)
+        location_intervals[index - 1].agent_id == agent_id &&
+        location_intervals[index].low == timestep)
     {
         location_intervals[index - 1].high = MAX_TIMESTEP;
-        location_intervals.pop_back();
+        location_intervals.erase(location_intervals.begin() + index);
 #ifdef DEBUG_MODE
         this->validate(location);
 #endif
         return;
     }
 
-    this->split(agent_id, location, timestep, MAX_TIMESTEP);
-    // cout << "Error" << agent_id << "failed to create reservation at goal location" << location << endl;
+    // location is 
+    if (location_intervals[index].low == timestep)
+    {
+        location_intervals[index].agent_id = agent_id;
+
 #ifdef DEBUG_MODE
-    this->validate(location);
+        this->validate(location);
 #endif
+        return;
+    }
+
+    cout << "Error reserving goal" << endl;
+    exit(-1);
 }
 
 void SIPPIntervals::truncate(int agent_id, int location, int timestep)

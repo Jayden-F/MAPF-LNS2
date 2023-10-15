@@ -615,12 +615,13 @@ bool LNS::runWinPP()
 
     if (!neighbor.old_paths.empty())
     {
-        for (int id = 0; id < neighbor.agents.size(); id++)
+        for (int index = 0; index < neighbor.agents.size(); index++)
         {
-            agents[neighbor.agents[id]].path = neighbor.old_paths[id];
-            agents[neighbor.agents[id]].path_planner->start_location = agents[neighbor.agents[id]].path.at(0).location;
-            sipp_intervals.insert_path(neighbor.agents[id], agents[neighbor.agents[id]].path);
-            sipp_intervals.reserve_goal(neighbor.agents[id], agents[neighbor.agents[id]].path.back().location, agents[neighbor.agents[id]].path.size() - 1);
+            int id = neighbor.agents[index];
+            agents[id].path = neighbor.old_paths[index];
+            agents[id].path_planner->start_location = agents[id].path[0].location;
+            sipp_intervals.insert_path(id, agents[id].path);
+            sipp_intervals.reserve_goal(id, agents[id].path.back().location, agents[id].path.size() - 1);
         }
         neighbor.sum_of_costs = neighbor.old_sum_of_costs;
     }
