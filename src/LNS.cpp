@@ -163,7 +163,7 @@ bool LNS::run()
                 sipp_intervals.agent_removed(neighbor.agents[i]);
 #endif
             }
-            agents[neighbor.agents[i]].path.clear();
+            // agents[neighbor.agents[i]].path.clear();
         }
 
         if (replan_algo_name == "EECBS")
@@ -455,14 +455,6 @@ bool LNS::runWinPP()
     std::vector<Path> accumulated_paths(agents.size());
 
     neighbor.sum_of_costs = 0;
-
-    cout << "Agents: ";
-    for (int id : neighbor.agents)
-    {
-        cout << agents[id].id << ", ";
-    }
-    cout << endl;
-
     runtime = ((fsec)(Time::now() - start_time)).count();
     double T = time_limit - runtime; // time limit
     if (!iteration_stats.empty())
