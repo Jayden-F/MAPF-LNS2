@@ -450,7 +450,6 @@ bool LNS::runWinPP()
     int remaining_retries = (int)shuffled_agents.size();
     int num_agents_at_goal = 0;
     int remaining_agents;
-    std::mt19937 *MT_S = new std::mt19937(0);
     auto random_begin = shuffled_agents.begin();
     std::vector<Path> accumulated_paths(agents.size());
 
@@ -468,7 +467,7 @@ bool LNS::runWinPP()
         remaining_agents = (int)shuffled_agents.size();
         auto p = shuffled_agents.begin();
 
-        std::shuffle(random_begin, shuffled_agents.end(), *MT_S); // shuffle agents
+        std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
                                                                   // reduce priority of agents on goal
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
                               {const Agent& agent = agents[id];
@@ -559,6 +558,7 @@ bool LNS::runWinPP()
                 cout << "Planning Window: " << planning_phases << " Complete" << endl;
 
             planning_phases++;
+            remaining_retries = (int)shuffled_agents.size();
             current_timestep += planning_period;
             random_begin = shuffled_agents.begin();
         }
