@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Default concurrency for make
+if [ -z "$CONCURRENCY" ]; then
+    CONCURRENCY=$(sysctl -n hw.ncpu 2>/dev/null || echo 1)
+fi
+
+PROGRAM="$0"
+SCRIPT_DIR=$(dirname "$PROGRAM")
+
+# Get action word
+if [ -z "$1" ]; then
+    ACTION="help"
+else
+    ACTION="$1"
+    shift
+fi
+
+if [ -z "$1" ]; then
+    FLAVOUR="debug"
+else
+    FLAVOUR="$1"
+    shift
+fi
+
+CMAKE_FLAGS=("-DCMAKE_EXPORT_COMPILE_COMMANDS=1")
+case "$FLAVOUR" in
+    fast)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE")
+        ;;
+    fastsym)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-g")
+        ;;
+    fastdebug)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RELEASE" "-DCMAKE_CXX_FLAGS=-DDEBUG_MODE")
+        ;;
+    debug)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG")
+        ;;
+    ubsan)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=undefined")
+        ;;
+    asan)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=address -D_GLIBCXX_DEBUG -DDEBUG_MODE")
+        ;;
+    tsan)
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=DEBUG" "-DCMAKE_CXX_FLAGS=-fsanitize=thread")
+        ;;
+esac
+
+BUILD_DIR="build"
+case "$ACTION" in
+    build)
+        (
+        cmake -B "$BUILD_DIR" "${CMAKE_FLAGS[@]}" "$SCRIPT_DIR"
+        cd "$BUILD_DIR" || exit 1
+        make -j "$CONCURRENCY"
+        )
+        ;;
+    run)
+        if [ -z "$1" ]; then
+            echo "$0: run command needs the name of a binary to run"
+            exit 1
+        fi
+        PROGRAM="$1"
+        shift 1
+        BIN_PATH="$SCRIPT_DIR/build"
+        if make -C "$BIN_PATH" -j "$CONCURRENCY"; then
+            "$BIN_PATH/$PROGRAM" "$@"
+        fi
+        ;;
+    compiledb)
+        compiledb make -j "$CONCURRENCY" dev main convert extras test
+        ;;
+    clean)
+        rm -r build
+        ;;
+    clobber)
+        make clobber
+        ;;
+    *)
+        if [ "$ACTION" != "help" ]; then
+            echo "Unrecognized command: $ACTION"
+        fi
+        echo "$0: Utility for building and running MAPF-LNS"
+        echo
+        echo "Commands:"
+        echo "  build [flavour] [targets]"
+        echo "  run [flavour] <binary>"
+        echo "  compiledb"
+        echo "  clean"
+        echo "  clobber"
+        echo
+        echo 'If no flavour is specified, it defaults to `dev`.'
+        ;;
+esac
