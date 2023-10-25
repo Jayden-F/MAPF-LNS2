@@ -301,7 +301,7 @@ public:
         numblocks_ = 0;
         label_ = 0;
     };
-    MemoryPool(int size)
+    MemoryPool(uint64_t size)
     {
         init(size);
     };
@@ -322,7 +322,7 @@ public:
         delete[] blocks_;
     }
 
-    void init(int size)
+    void init(u_int64_t size)
     {
         numblocks_ = ((size) >> node_pool_ns::LOG2_NBS) + 1;
         blocks_ = new SIPPNode *[numblocks_];
@@ -343,7 +343,7 @@ public:
         return ready_;
     }
 
-    bool has_node(int id)
+    bool has_node(u_int64_t id)
     {
         // if (id >= numblocks_)
         // {
@@ -354,7 +354,7 @@ public:
         return node->label == label_ && node->id == id;
     }
 
-    bool is_closed(int id)
+    bool is_closed(u_int64_t id)
     {
         // if (id >= numblocks_)
         // {
@@ -368,7 +368,7 @@ public:
         }
         return node->is_closed;
     }
-    SIPPNode *get_node(int id)
+    SIPPNode *get_node(u_int64_t id)
     {
         // if (id >= numblocks_)
         // {
@@ -383,7 +383,7 @@ public:
         }
         return node;
     }
-    void close_node(int id)
+    void close_node(u_int64_t id)
     {
         if (id >= numblocks_)
         {
@@ -435,7 +435,7 @@ public:
         return &(blocks_[block_id][list_id]);
     }
 
-    SIPPNode *generate_node(int id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval, int interval_index)
+    SIPPNode *generate_node(u_int64_t id, int location, int g_val, int h_val, SIPPNode *parent, int timestep, const SIPPInterval *interval, int interval_index)
     {
         // if (id >= numblocks_)
         // {
@@ -475,7 +475,7 @@ public:
 
         return node;
     }
-    SIPPNode *generate_node(int id, SIPPNode &new_node)
+    SIPPNode *generate_node(u_int64_t id, SIPPNode &new_node)
     {
         SIPPNode *node = generate(id);
 
@@ -498,7 +498,7 @@ public:
         // node->num_of_conflicts = new_node.num_of_conflicts;
         return node;
     }
-    SIPPNode *replace_node(int id, SIPPNode &new_node)
+    SIPPNode *replace_node(u_int64_t id, SIPPNode &new_node)
     {
         SIPPNode *node = generate(id);
 

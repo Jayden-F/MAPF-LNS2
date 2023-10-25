@@ -187,8 +187,10 @@ Path SIPP::findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool 
     int h = my_heuristic[start_location];
     // auto start = new SIPPNode(start_location, 0, h, nullptr, 0, get<1>(interval), get<1>(interval),
     //                             get<2>(interval), get<2>(interval));
+    u_int64_t node_id = static_cast<u_int64_t>(start_location) * static_cast<u_int64_t>(depth_limit) + min(static_cast<u_int64_t>(depth_limit),
+                                                                                                           static_cast<u_int64_t>(interval->high) - static_cast<u_int64_t>(start_timestep));
 
-    SIPPNode *start = memory_pool.generate_node(start_location * depth_limit + min(depth_limit, interval->high - start_timestep), start_location, start_timestep, h, nullptr, start_timestep, interval, start_index);
+    SIPPNode *start = memory_pool.generate_node(node_id, start_location, start_timestep, h, nullptr, start_timestep, interval, start_index);
     open.push(start);
     SIPPNode next;
 
@@ -257,7 +259,8 @@ Path SIPP::findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool 
 
                 next = SIPPNode(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, interval, interval_index);
                 // try to retrieve it from the hash table
-                int node_id = next.location * depth_limit + min(depth_limit, next.interval->high - start_timestep);
+                node_id = (next.location) * static_cast<u_int64_t>(depth_limit) + min(static_cast<u_int64_t>(depth_limit),
+                                                                                      static_cast<u_int64_t>(next.interval->high) - static_cast<u_int64_t>(start_timestep));
                 dominanceCheck(open, node_id, &next, memory_pool);
             }
             // } // end for loop that generates successors
@@ -649,7 +652,7 @@ bool SIPP::dominanceCheck(SIPPNode *new_node)
 }
 
 // return true iff we the new node node domintates old
-bool SIPP::dominanceCheck(pqueue_min &open, int id, SIPPNode *new_node, MemoryPool &memory_pool)
+bool SIPP::dominanceCheck(pqueue_min &open, u_int64_t id, SIPPNode *new_node, MemoryPool &memory_pool)
 {
     SIPPNode *pool_node(nullptr);
     // Node not generated in window

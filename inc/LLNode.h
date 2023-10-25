@@ -15,7 +15,7 @@ public:
 	bool is_goal = false;
 	bool is_closed = false;
 	int label = -1;
-	int id = -1;
+	uint64_t id = 0;
 	// the following is used to comapre nodes in the OPEN list
 	struct compare_node
 	{
@@ -58,7 +58,7 @@ public:
 	LLNode() {}
 	LLNode(int id) : id(id), label(-1), location(-1), priority_(UINT32_MAX) {}
 	LLNode(int location, int g_val, int h_val, LLNode *parent, int timestep, int num_of_conflicts) : location(location), g_val(g_val), h_val(h_val), parent(parent), timestep(timestep),
-																									 num_of_conflicts(num_of_conflicts), is_closed(false), label(-1), id(-1), priority_(UINT32_MAX) {}
+																									 num_of_conflicts(num_of_conflicts), is_closed(false), label(-1), id(0), priority_(UINT32_MAX) {}
 	LLNode(const LLNode &other) { copy(other); }
 	// LLNode(const LLNode &) = delete;
 
@@ -93,7 +93,7 @@ public:
 		is_goal = 0;
 		is_closed = false;
 		label = -1;
-		id = -1;
+		id = 0;
 		priority_ = UINT32_MAX;
 	}
 

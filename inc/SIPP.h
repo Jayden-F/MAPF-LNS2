@@ -52,6 +52,6 @@ private:
 	void updateFocalList();
 	void releaseNodes();
 	bool dominanceCheck(SIPPNode *new_node);
-	bool dominanceCheck(pqueue_min &open, int id, SIPPNode *new_node, MemoryPool &memory_pool);
+	bool dominanceCheck(pqueue_min &open, u_int64_t id, SIPPNode *new_node, MemoryPool &memory_pool);
 	void printSearchTree() const;
 };
