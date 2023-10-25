@@ -468,7 +468,7 @@ bool LNS::runWinPP()
         auto p = shuffled_agents.begin();
 
         std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
-                                                                  // reduce priority of agents on goal
+        // reduce priority of agents on goal
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
                               {const Agent& agent = agents[id];
             return !(agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
@@ -613,7 +613,7 @@ bool LNS::runWinPP()
             int id = neighbor.agents[index];
             agents[id].path = neighbor.old_paths[index];
             agents[id].path_planner->start_location = agents[id].path[0].location;
-            sipp_intervals.insert_path(id, agents[id].path);
+            sipp_intervals.insert_path(id, agents[id].path, 0, agents[id].path.size() - 2);
             sipp_intervals.reserve_goal(id, agents[id].path.back().location, agents[id].path.size() - 1);
         }
         neighbor.sum_of_costs = neighbor.old_sum_of_costs;
@@ -1095,12 +1095,33 @@ void LNS::writePathsToFile(const string &file_name) const
     // header
     // output << agents.size() << endl;
 
-    for (const auto &agent : agents)
+    output << "events:" << endl;
+
+    bool remaining_agents = true;
+    int t = 0;
+    while (remaining_agents && t < 10)
     {
-        output << "Agent " << agent.id << ":";
-        for (const auto &state : agent.path)
-            output << "(" << instance.getRowCoordinate(state.location) << "," << instance.getColCoordinate(state.location) << ")->";
-        output << endl;
+        remaining_agents = false;
+
+        output << "- id: " << '"' << t << '"' << endl;
+        output << "  type: timestep" << endl;
+
+        for (const auto &agent : agents)
+        {
+            if (t < agent.path.size())
+            {
+                remaining_agents = true;
+
+                PathEntry state = agent.path[t];
+
+                output << "  " << '"' << agent.id << '"' << ':' << endl;
+
+                output << "  - x: " << instance.getRowCoordinate(state.location) << endl;
+                output << "    y: " << instance.getColCoordinate(state.location) << endl;
+            }
+        }
+
+        t++;
     }
     output.close();
 }

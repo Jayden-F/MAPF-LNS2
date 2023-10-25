@@ -61,10 +61,10 @@ void SIPPIntervals::insert_path(int agent_id, Path &path, int start, int horizon
     int low(start);
     // int high(start);
 
-    int t_max = min((int)path.size() - 1, horizon);
-    for (int t = 0; t < path.size(); t++)
+    int t_max = min((int)path.size(), horizon + 1);
+    for (int t = 0; t < t_max; t++)
     {
-        if (t + 1 > t_max || path[t].location != path[t + 1].location)
+        if (t + 1 >= t_max || path[t].location != path[t + 1].location)
         {
 #ifdef DEBUG_MODE
             cout << agent_id << " splitting: " << path[t].location << " @ [" << low << "," << start + t + 1 << ")" << endl;
@@ -86,10 +86,10 @@ void SIPPIntervals::remove_path(int agent_id, Path &path, int start, int period,
     int low(start + period + 1); // Low timestep of interval
     // int high(start + period + 1); // High timestep of interval
 
-    int t_max = min((int)path.size() - 1, horizon);
-    for (int t = period + 1; t < (int)path.size(); t++)
+    int t_max = min((int)path.size(), horizon + 1);
+    for (int t = period + 1; t < t_max; t++)
     {
-        if (t + 1 > t_max || path[t].location != path[t + 1].location)
+        if (t + 1 >= t_max || path[t].location != path[t + 1].location)
         {
 #ifdef DEBUG_MODE
             cout << agent_id << " merging: " << path[t].location << " @ [" << low << "," << start + t + 1 << ")" << endl;
@@ -460,7 +460,7 @@ void SIPPIntervals::validate(int location) const
     }
 
     for (int i = 0; i < location_intervals.size() - 1; i++)
-    cout << "[" << location_intervals[i].low << "," << location_intervals[i].high << "): " << location_intervals[i].agent_id << " , ";
+        cout << "[" << location_intervals[i].low << "," << location_intervals[i].high << "): " << location_intervals[i].agent_id << " , ";
     cout << "[" << location_intervals.back().low << "," << location_intervals.back().high << "): " << location_intervals.back().agent_id << " " << endl;
 
     for (int i = 0; i < location_intervals.size() - 1; i++)
