@@ -474,7 +474,7 @@ bool LNS::runWinPP()
             return !(agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
                      sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep)); });
 
-        while (p != shuffled_agents.end())
+        while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
         {
             int id = *p;
 
