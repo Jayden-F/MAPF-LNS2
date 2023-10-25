@@ -259,8 +259,8 @@ Path SIPP::findPath(pqueue_min &open, SIPPIntervals &sipp_intervals, MemoryPool 
 
                 next = SIPPNode(next_location, next_timestep, my_heuristic[next_location], curr, next_timestep, interval, interval_index);
                 // try to retrieve it from the hash table
-                node_id = (next.location) * static_cast<u_int64_t>(depth_limit) + min(static_cast<u_int64_t>(depth_limit),
-                                                                                      static_cast<u_int64_t>(next.interval->high) - static_cast<u_int64_t>(start_timestep));
+                node_id = static_cast<u_int64_t>(next.location) * static_cast<u_int64_t>(depth_limit) + min(static_cast<u_int64_t>(depth_limit),
+                                                                                                            static_cast<u_int64_t>(next.interval->high) - static_cast<u_int64_t>(start_timestep));
                 dominanceCheck(open, node_id, &next, memory_pool);
             }
             // } // end for loop that generates successors
