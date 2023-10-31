@@ -156,7 +156,7 @@ bool LNS::run()
 
             if (replan_algo_name == "winPP")
             {
-                sipp_intervals.remove_path(neighbor.agents[i], agents[neighbor.agents[i]].path);
+                sipp_intervals.remove_path(neighbor.agents[i], agents[neighbor.agents[i]].path, 0, 0, agents[neighbor.agents[i]].path.size() - 2);
                 sipp_intervals.unreserve_goal(neighbor.agents[i], agents[neighbor.agents[i]].path.back().location, agents[neighbor.agents[i]].path.size() - 1);
 
 #ifdef DEBUG_MODE
@@ -467,15 +467,16 @@ bool LNS::runWinPP()
         remaining_agents = (int)shuffled_agents.size();
         auto p = shuffled_agents.begin();
 
-        std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
+        // std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
         // reduce priority of agents on goal
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
                               {const Agent& agent = agents[id];
             return !(agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
                      sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep)); });
 
-        while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
+        while (p != shuffled_agents.end())
         {
+
             int id = *p;
 
             if (screen >= 3)
