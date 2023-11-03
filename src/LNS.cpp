@@ -465,20 +465,16 @@ bool LNS::runWinPP()
     {
 
         remaining_agents = (int)shuffled_agents.size();
-        auto p = shuffled_agents.begin();
-
-        // std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
+        std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
         // reduce priority of agents on goal
         std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
                               {const Agent& agent = agents[id];
             return !(agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
                      sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep)); });
 
-        while (p != shuffled_agents.end())
+        for (auto p = shuffled_agents.begin(); p != shuffled_agents.end(); p++)
         {
-
             int id = *p;
-
             if (screen >= 3)
                 cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
                      << "Agent " << agents[id].id << endl;
@@ -494,12 +490,10 @@ bool LNS::runWinPP()
                     // sipp_intervals.validate(agents[id].path_planner->start_location);
                 }
 
-                auto rp = shuffled_agents.begin();
-                while (rp != p)
+                for (auto rp = shuffled_agents.begin(); rp != p; rp++)
                 {
                     int r_id = *rp;
                     sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep, 0, planning_horizon);
-                    ++rp;
                 }
 
                 std::rotate(shuffled_agents.begin(), p, p + 1);
@@ -511,7 +505,6 @@ bool LNS::runWinPP()
 
             sipp_intervals.insert_path(agents[id].id, agents[id].path, current_timestep, planning_horizon);
             remaining_agents--;
-            ++p;
         }
 
         // Check if all agents have a path for the window
@@ -523,18 +516,19 @@ bool LNS::runWinPP()
             {
                 int start_index = (planning_phases > 0 && agents[id].path.size() > 1) ? 1 : 0;
                 // Resize vector to account for next window.
-                int window_end_index = min(planning_period, (int)agents[id].path.size() - 1);
+                // int window_end_index =
+                //     min(planning_period, (int)agents[id].path.size() - 1);
                 accumulated_paths[id].resize((int)accumulated_paths[id].size() + planning_period + 1 - start_index,
-                                             agents[id].path[window_end_index]);
+                                             agents[id].path[planning_period]);
 
                 // Add new plan onto the end of previous plan
-                for (int loc = start_index; loc < window_end_index + start_index; loc++)
-                    accumulated_paths[id][planning_phases * planning_period + loc] = agents[id].path[loc];
+                for (int loc = start_index; loc < planning_period + start_index; loc++)
+                    {accumulated_paths[id][planning_phases * planning_period + loc] = agents[id].path[loc];}
 
                 // Move agent to next planning phase and check if at goal
                 sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period, planning_horizon);
                 // Check if agent is at goal
-                agents[id].path_planner->start_location = agents[id].path[window_end_index].location;
+                agents[id].path_planner->start_location = agents[id].path[planning_period].location;
                 if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
                     sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep + planning_period))
                 {
@@ -1107,22 +1101,22 @@ void LNS::writePathsToFile(const string &file_name) const
         output << "- id: " << '"' << t << '"' << endl;
         output << "  type: timestep" << endl;
 
-        for (const auto &agent : agents)
-        {
-            if (t < agent.path.size())
-            {
-                remaining_agents = true;
+    for (const auto &agent : agents)
+    {
+    if (t < agent.path.size())
+                {
+                    remaining_agents = true;
 
-                PathEntry state = agent.path[t];
+                    PathEntry state = agent.path[t];
 
-                output << "  " << '"' << agent.id << '"' << ':' << endl;
+                    output << "  " << '"' << agent.id << '"' << ':' << endl;
 
-                output << "  - x: " << instance.getRowCoordinate(state.location) << endl;
-                output << "    y: " << instance.getColCoordinate(state.location) << endl;
+                    output << "  - x: " << instance.getRowCoordinate(state.location) << endl;
+                    output << "    y: " << instance.getColCoordinate(state.location) << endl;
+                }
             }
-        }
 
-        t++;
+            t++;
     }
     output.close();
 }

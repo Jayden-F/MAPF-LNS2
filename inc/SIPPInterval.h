@@ -91,10 +91,10 @@ private:
                 return mid;
         }
 
-#ifdef DEBUG_MODE
         this->validate(location);
-        cerr << "ERROR: binary_search failed to find interval " << timestep << endl;
-#endif
+        cerr << "ERROR: binary_search failed to find interval " << timestep
+             << endl;
+        
         return -1;
     }
 };
