@@ -55,6 +55,7 @@ def run(command: List[str]) -> subprocess.CompletedProcess:
         retval = subprocess.run(command, capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
         print(e.stderr.decode('utf-8'))
+        print(e.stdout.decode('utf-8'))
 
     return retval
 
@@ -67,7 +68,7 @@ args: Dict[str, List[str]] = {
     "-m": maps,
     "-a": scenarios,
     "-o": ["test"],
-    "-k": [str(x) for x in range(700, 1001)],
+    "-k": [str(x) for x in range(1, 10)],
     "-t": ["60"],
     "--initLNS": ["false"],
     "--initAlgo": ["winPP"],
@@ -82,5 +83,5 @@ args: Dict[str, List[str]] = {
 
 if __name__ == "__main__":
     experiments: List[Tuple[str]] = cartesian_product(args)
-    with ProcessPoolExecutor(max_workers=1) as executor:
+    with ProcessPoolExecutor(max_workers=2) as executor:
         result = list(tqdm(executor.map(run, experiments), total=len(experiments), desc="Running experiments"))
