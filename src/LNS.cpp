@@ -45,7 +45,7 @@ LNS::LNS(const Instance &instance, double time_limit, const string &init_algo_na
 bool LNS::run()
 {
     // only for statistic analysis, and thus is not included in runtime
-    memory_pool.init(instance.map_size * (planning_horizon + 1));
+    memory_pool.init(static_cast<uint64_t>(instance.map_size) * (static_cast<uint64_t>(planning_horizon) + 1));
     sipp_intervals = SIPPIntervals(instance.map_size);
 
     sum_of_distances = 0;
