@@ -7,7 +7,7 @@ IF(NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "RELEASE")
 ENDIF()
 
-include_directories("inc" "inc/CBS" "inc/PIBT")
+include_directories("inc" "inc/CBS" "inc/PIBT" "inc/btree")
 
 file(GLOB SOURCES "src/*.cpp" "src/CBS/*.cpp" "src/PIBT/*.cpp")
 add_executable(lns ${SOURCES})
