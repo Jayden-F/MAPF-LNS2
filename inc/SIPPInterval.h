@@ -3,6 +3,7 @@
 #include "btree/btree_container.h"
 #include "btree/btree_map.h"
 #include "common.h"
+#include <cassert>
 #include <utility>
 
 #define NO_AGENT -1
@@ -36,13 +37,15 @@ class SIPPIntervals {
     SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(0) {}
     bool get_first_interval(int location, int start_time,
                             iterator &return_interval);
-    bool is_location_clear(int location, int timestep) {
-        auto &intervals = intervals_[location];
 
-        if (intervals.empty())
+    bool is_location_clear(int location, int timestep) {
+        auto &location_intervals = intervals_[location];
+
+        if (location_intervals.empty()) {
             init_location(location);
-        return intervals.rbegin()->second.low <= timestep &&
-               intervals.rbegin()->second.agent_id == NO_AGENT;
+        }
+        return location_intervals.rbegin()->second.low <= timestep &&
+               location_intervals.rbegin()->second.agent_id == NO_AGENT;
     }
     const vector<iterator> get_intervals(int from, iterator interval,
                                          int timestep, int to);
@@ -83,8 +86,16 @@ class SIPPIntervals {
 
   private:
     void init_location(int location) {
+
+        assert(intervals_[location].empty());
+#ifdef DEBUG_MODE
+        this->validate(location);
+#endif
         intervals_[location].insert(
             std::make_pair(0, std::move(SIPPInterval(0, MAX_TIMESTEP))));
+#ifdef DEBUG_MODE
+        this->validate(location);
+#endif
     }
     void split(int agent_id, int location, int low, int high);
     void merge(int agent_id, int location, int low, int high);

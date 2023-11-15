@@ -167,6 +167,7 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep) {
     cout << "agent: " << agent_id
          << " reservation on goal location: " << location
          << " at timestep:" << timestep << endl;
+    this->validate(location);
 #endif
     auto &location_intervals = intervals_[location];
 
@@ -524,6 +525,11 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high) {
 void SIPPIntervals::validate(int location) const {
 
     auto &location_intervals = intervals_[location];
+
+    if (location_intervals.empty()) {
+        return;
+    }
+
     if (location_intervals.begin()->second.low != 0) {
         cerr << "ERROR: interval does not start at 0" << endl;
         exit(1);
@@ -536,13 +542,6 @@ void SIPPIntervals::validate(int location) const {
              << "):" << i->second.agent_id << ", ";
     }
     cout << endl;
-    // for (int i = 0; i < location_intervals.size() - 1; i++)
-    //     cout << "[" << location_intervals[i].low << ","
-    //          << location_intervals[i].high
-    //          << "): " << location_intervals[i].agent_id << " , ";
-    // cout << "[" << location_intervals.back().low << ","
-    //      << location_intervals.back().high
-    //      << "): " << location_intervals.back().agent_id << " " << endl;
 
     for (auto i = location_intervals.begin();; i++) {
         auto next_iterator = i;
