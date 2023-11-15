@@ -4,32 +4,33 @@
 #include <algorithm>
 #include <queue>
 
-LNS::LNS(const Instance &instance, double time_limit, const string &init_algo_name, const string &replan_algo_name,
-         const string &destory_name, int neighbor_size, int num_of_iterations, bool use_init_lns,
-         const string &init_destory_name, bool use_sipp, int screen, PIBTPPS_option pipp_option) : BasicLNS(instance, time_limit, neighbor_size, screen),
-                                                                                                   init_algo_name(init_algo_name), replan_algo_name(replan_algo_name), num_of_iterations(num_of_iterations),
-                                                                                                   use_init_lns(use_init_lns), init_destory_name(init_destory_name),
-                                                                                                   path_table(instance.map_size), pipp_option(pipp_option), sipp_intervals(instance.map_size)
-{
+LNS::LNS(const Instance &instance, double time_limit,
+         const string &init_algo_name, const string &replan_algo_name,
+         const string &destory_name, int neighbor_size, int num_of_iterations,
+         bool use_init_lns, const string &init_destory_name, bool use_sipp,
+         int screen, PIBTPPS_option pipp_option)
+    : BasicLNS(instance, time_limit, neighbor_size, screen),
+      init_algo_name(init_algo_name), replan_algo_name(replan_algo_name),
+      num_of_iterations(num_of_iterations), use_init_lns(use_init_lns),
+      init_destory_name(init_destory_name), path_table(instance.map_size),
+      pipp_option(pipp_option), sipp_intervals(instance.map_size) {
     start_time = Time::now();
 
     replan_time_limit = time_limit / 100;
-    if (destory_name == "Adaptive")
-    {
+    if (destory_name == "Adaptive") {
         ALNS = true;
         destroy_weights.assign(DESTORY_COUNT, 1);
         decay_factor = 0.01;
         reaction_factor = 0.01;
-    }
-    else if (destory_name == "RandomWalk")
+    } else if (destory_name == "RandomWalk")
         destroy_strategy = RANDOMWALK;
     else if (destory_name == "Intersection")
         destroy_strategy = INTERSECTION;
     else if (destory_name == "Random")
         destroy_strategy = RANDOMAGENTS;
-    else
-    {
-        cerr << "Destroy heuristic " << destory_name << " does not exists. " << endl;
+    else {
+        cerr << "Destroy heuristic " << destory_name << " does not exists. "
+             << endl;
         exit(-1);
     }
 
@@ -39,82 +40,78 @@ LNS::LNS(const Instance &instance, double time_limit, const string &init_algo_na
         agents.emplace_back(instance, i, use_sipp);
     preprocessing_time = ((fsec)(Time::now() - start_time)).count();
     if (screen >= 2)
-        cout << "Pre-processing time = " << preprocessing_time << " seconds." << endl;
+        cout << "Pre-processing time = " << preprocessing_time << " seconds."
+             << endl;
 }
 
-bool LNS::run()
-{
+bool LNS::run() {
     // only for statistic analysis, and thus is not included in runtime
-    memory_pool.init(static_cast<uint64_t>(instance.map_size) * (static_cast<uint64_t>(planning_horizon) + 1));
+    memory_pool.init(static_cast<uint64_t>(instance.map_size) *
+                     (static_cast<uint64_t>(planning_horizon) + 1));
     sipp_intervals = SIPPIntervals(instance.map_size);
 
     sum_of_distances = 0;
-    for (const auto &agent : agents)
-    {
-        sum_of_distances += agent.path_planner->my_heuristic[agent.path_planner->start_location];
+    for (const auto &agent : agents) {
+        sum_of_distances +=
+            agent.path_planner
+                ->my_heuristic[agent.path_planner->start_location];
     }
 
     initial_solution_runtime = 0;
     start_time = Time::now();
     bool succ = getInitialSolution();
     initial_solution_runtime = ((fsec)(Time::now() - start_time)).count();
-    if (!succ && initial_solution_runtime < time_limit)
-    {
-        if (use_init_lns)
-        {
-            init_lns = new InitLNS(instance, agents, time_limit - initial_solution_runtime,
-                                   replan_algo_name, init_destory_name, neighbor_size, screen);
+    if (!succ && initial_solution_runtime < time_limit) {
+        if (use_init_lns) {
+            init_lns = new InitLNS(
+                instance, agents, time_limit - initial_solution_runtime,
+                replan_algo_name, init_destory_name, neighbor_size, screen);
             succ = init_lns->run();
             if (succ) // accept new paths
             {
                 path_table.reset();
-                for (const auto &agent : agents)
-                {
+                for (const auto &agent : agents) {
                     path_table.insertPath(agent.id, agent.path);
                 }
                 init_lns->clear();
                 initial_sum_of_costs = init_lns->sum_of_costs;
                 sum_of_costs = initial_sum_of_costs;
             }
-            initial_solution_runtime = ((fsec)(Time::now() - start_time)).count();
-        }
-        else // use random restart
+            initial_solution_runtime =
+                ((fsec)(Time::now() - start_time)).count();
+        } else // use random restart
         {
-            while (!succ && initial_solution_runtime < time_limit)
-            {
+            while (!succ && initial_solution_runtime < time_limit) {
                 succ = getInitialSolution();
-                initial_solution_runtime = ((fsec)(Time::now() - start_time)).count();
+                initial_solution_runtime =
+                    ((fsec)(Time::now() - start_time)).count();
                 restart_times++;
             }
         }
     }
 
-    iteration_stats.emplace_back(neighbor.agents.size(),
-                                 initial_sum_of_costs, initial_solution_runtime, init_algo_name);
+    iteration_stats.emplace_back(neighbor.agents.size(), initial_sum_of_costs,
+                                 initial_solution_runtime, init_algo_name);
     runtime = initial_solution_runtime;
-    if (succ)
-    {
+    if (succ) {
         if (screen >= 1)
             cout << "Initial solution cost = " << initial_sum_of_costs << ", "
                  << "runtime = " << initial_solution_runtime << endl;
-    }
-    else
-    {
-        cout << "Failed to find an initial solution in "
-             << runtime << " seconds after  " << restart_times << " restarts" << endl;
+    } else {
+        cout << "Failed to find an initial solution in " << runtime
+             << " seconds after  " << restart_times << " restarts" << endl;
         return false; // terminate because no initial solution is found
     }
 
-    while (runtime < time_limit && iteration_stats.size() <= num_of_iterations)
-    {
+    while (runtime < time_limit &&
+           iteration_stats.size() <= num_of_iterations) {
         runtime = ((fsec)(Time::now() - start_time)).count();
         if (screen >= 1)
             validateSolution();
         if (ALNS)
             chooseDestroyHeuristicbyALNS();
 
-        switch (destroy_strategy)
-        {
+        switch (destroy_strategy) {
         case RANDOMWALK:
             succ = generateNeighborByRandomWalk();
             break;
@@ -125,9 +122,9 @@ bool LNS::run()
             neighbor.agents.resize(agents.size());
             for (int i = 0; i < (int)agents.size(); i++)
                 neighbor.agents[i] = i;
-            if (neighbor.agents.size() > neighbor_size)
-            {
-                std::random_shuffle(neighbor.agents.begin(), neighbor.agents.end());
+            if (neighbor.agents.size() > neighbor_size) {
+                std::random_shuffle(neighbor.agents.begin(),
+                                    neighbor.agents.end());
                 neighbor.agents.resize(neighbor_size);
             }
             succ = true;
@@ -142,22 +139,26 @@ bool LNS::run()
         // store the neighbor information
         neighbor.old_paths.resize(neighbor.agents.size());
         neighbor.old_sum_of_costs = 0;
-        for (int i = 0; i < (int)neighbor.agents.size(); i++)
-        {
-            neighbor.old_sum_of_costs += agents[neighbor.agents[i]].path.size() - 1;
+        for (int i = 0; i < (int)neighbor.agents.size(); i++) {
+            neighbor.old_sum_of_costs +=
+                agents[neighbor.agents[i]].path.size() - 1;
 
-            if (replan_algo_name == "PP" || replan_algo_name == "winPP")
-            {
+            if (replan_algo_name == "PP" || replan_algo_name == "winPP") {
                 neighbor.old_paths[i] = agents[neighbor.agents[i]].path;
             }
 
             if (replan_algo_name == "PP")
-                path_table.deletePath(neighbor.agents[i], agents[neighbor.agents[i]].path);
+                path_table.deletePath(neighbor.agents[i],
+                                      agents[neighbor.agents[i]].path);
 
-            if (replan_algo_name == "winPP")
-            {
-                sipp_intervals.remove_path(neighbor.agents[i], agents[neighbor.agents[i]].path, 0, 0, agents[neighbor.agents[i]].path.size() - 2);
-                sipp_intervals.unreserve_goal(neighbor.agents[i], agents[neighbor.agents[i]].path.back().location, agents[neighbor.agents[i]].path.size() - 1);
+            if (replan_algo_name == "winPP") {
+                sipp_intervals.remove_path(
+                    neighbor.agents[i], agents[neighbor.agents[i]].path, 0, 0,
+                    agents[neighbor.agents[i]].path.size() - 2);
+                sipp_intervals.unreserve_goal(
+                    neighbor.agents[i],
+                    agents[neighbor.agents[i]].path.back().location,
+                    agents[neighbor.agents[i]].path.size() - 1);
 
 #ifdef DEBUG_MODE
                 sipp_intervals.agent_removed(neighbor.agents[i]);
@@ -174,8 +175,7 @@ bool LNS::run()
             succ = runPP();
         else if (replan_algo_name == "winPP")
             succ = runWinPP();
-        else
-        {
+        else {
             cerr << "Wrong replanning strategy" << endl;
             exit(-1);
         }
@@ -183,7 +183,11 @@ bool LNS::run()
         if (ALNS) // update destroy heuristics
         {
             if (neighbor.old_sum_of_costs > neighbor.sum_of_costs)
-                destroy_weights[selected_neighbor] = reaction_factor * (neighbor.old_sum_of_costs - neighbor.sum_of_costs) / neighbor.agents.size() + (1 - reaction_factor) * destroy_weights[selected_neighbor];
+                destroy_weights[selected_neighbor] =
+                    reaction_factor *
+                        (neighbor.old_sum_of_costs - neighbor.sum_of_costs) /
+                        neighbor.agents.size() +
+                    (1 - reaction_factor) * destroy_weights[selected_neighbor];
             else
                 destroy_weights[selected_neighbor] =
                     (1 - decay_factor) * destroy_weights[selected_neighbor];
@@ -195,7 +199,8 @@ bool LNS::run()
                  << "group size = " << neighbor.agents.size() << ", "
                  << "solution cost = " << sum_of_costs << ", "
                  << "remaining time = " << time_limit - runtime << endl;
-        iteration_stats.emplace_back(neighbor.agents.size(), sum_of_costs, runtime, replan_algo_name);
+        iteration_stats.emplace_back(neighbor.agents.size(), sum_of_costs,
+                                     runtime, replan_algo_name);
     }
 
     average_group_size = -iteration_stats.front().num_of_agents;
@@ -213,8 +218,7 @@ bool LNS::run()
     return true;
 }
 
-bool LNS::getInitialSolution()
-{
+bool LNS::getInitialSolution() {
     neighbor.agents.resize(agents.size());
     for (int i = 0; i < (int)agents.size(); i++)
         neighbor.agents[i] = i;
@@ -235,29 +239,24 @@ bool LNS::getInitialSolution()
         succ = runWinPIBT();
     else if (init_algo_name == "CBS")
         succ = runCBS();
-    else
-    {
-        cerr << "Initial MAPF solver " << init_algo_name << " does not exist!" << endl;
+    else {
+        cerr << "Initial MAPF solver " << init_algo_name << " does not exist!"
+             << endl;
         exit(-1);
     }
-    if (succ)
-    {
+    if (succ) {
         initial_sum_of_costs = neighbor.sum_of_costs;
         sum_of_costs = neighbor.sum_of_costs;
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
 
-bool LNS::runEECBS()
-{
+bool LNS::runEECBS() {
     vector<SingleAgentSolver *> search_engines;
     search_engines.reserve(neighbor.agents.size());
-    for (int i : neighbor.agents)
-    {
+    for (int i : neighbor.agents) {
         search_engines.push_back(agents[i].path_planner);
     }
 
@@ -284,11 +283,11 @@ bool LNS::runEECBS()
     if (!iteration_stats.empty()) // replan
         T = min(T, replan_time_limit);
     bool succ = ecbs.solve(T, 0);
-    if (succ && ecbs.solution_cost < neighbor.old_sum_of_costs) // accept new paths
+    if (succ &&
+        ecbs.solution_cost < neighbor.old_sum_of_costs) // accept new paths
     {
         auto id = neighbor.agents.begin();
-        for (size_t i = 0; i < neighbor.agents.size(); i++)
-        {
+        for (size_t i = 0; i < neighbor.agents.size(); i++) {
             agents[*id].path = *ecbs.paths[i];
             path_table.insertPath(agents[*id].id, agents[*id].path);
             ++id;
@@ -296,13 +295,10 @@ bool LNS::runEECBS()
         neighbor.sum_of_costs = ecbs.solution_cost;
         if (sum_of_costs_lowerbound < 0)
             sum_of_costs_lowerbound = ecbs.getLowerBound();
-    }
-    else // stick to old paths
+    } else // stick to old paths
     {
-        if (!neighbor.old_paths.empty())
-        {
-            for (int id : neighbor.agents)
-            {
+        if (!neighbor.old_paths.empty()) {
+            for (int id : neighbor.agents) {
                 path_table.insertPath(agents[id].id, agents[id].path);
             }
             neighbor.sum_of_costs = neighbor.old_sum_of_costs;
@@ -312,14 +308,12 @@ bool LNS::runEECBS()
     }
     return succ;
 }
-bool LNS::runCBS()
-{
+bool LNS::runCBS() {
     if (screen >= 2)
         cout << "old sum of costs = " << neighbor.old_sum_of_costs << endl;
     vector<SingleAgentSolver *> search_engines;
     search_engines.reserve(neighbor.agents.size());
-    for (int i : neighbor.agents)
-    {
+    for (int i : neighbor.agents) {
         search_engines.push_back(agents[i].path_planner);
     }
 
@@ -341,11 +335,11 @@ bool LNS::runCBS()
     if (!iteration_stats.empty())    // replan
         T = min(T, replan_time_limit);
     bool succ = cbs.solve(T, 0);
-    if (succ && cbs.solution_cost <= neighbor.old_sum_of_costs) // accept new paths
+    if (succ &&
+        cbs.solution_cost <= neighbor.old_sum_of_costs) // accept new paths
     {
         auto id = neighbor.agents.begin();
-        for (size_t i = 0; i < neighbor.agents.size(); i++)
-        {
+        for (size_t i = 0; i < neighbor.agents.size(); i++) {
             agents[*id].path = *cbs.paths[i];
             path_table.insertPath(agents[*id].id, agents[*id].path);
             ++id;
@@ -353,13 +347,10 @@ bool LNS::runCBS()
         neighbor.sum_of_costs = cbs.solution_cost;
         if (sum_of_costs_lowerbound < 0)
             sum_of_costs_lowerbound = cbs.getLowerBound();
-    }
-    else // stick to old paths
+    } else // stick to old paths
     {
-        if (!neighbor.old_paths.empty())
-        {
-            for (int id : neighbor.agents)
-            {
+        if (!neighbor.old_paths.empty()) {
+            for (int id : neighbor.agents) {
                 path_table.insertPath(agents[id].id, agents[id].path);
             }
             neighbor.sum_of_costs = neighbor.old_sum_of_costs;
@@ -369,14 +360,16 @@ bool LNS::runCBS()
     }
     return succ;
 }
-bool LNS::runPP()
-{
+bool LNS::runPP() {
     auto shuffled_agents = neighbor.agents;
     std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
-    if (screen >= 2)
-    {
+    if (screen >= 2) {
         for (auto id : shuffled_agents)
-            cout << id << "(" << agents[id].path_planner->my_heuristic[agents[id].path_planner->start_location] << "->" << agents[id].path.size() - 1 << "), ";
+            cout << id << "("
+                 << agents[id]
+                        .path_planner
+                        ->my_heuristic[agents[id].path_planner->start_location]
+                 << "->" << agents[id].path.size() - 1 << "), ";
         cout << endl;
     }
     int remaining_agents = (int)shuffled_agents.size();
@@ -387,12 +380,16 @@ bool LNS::runPP()
     if (!iteration_stats.empty())    // replan
         T = min(T, replan_time_limit);
     auto time = Time::now();
-    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size, &path_table);
-    while (p != shuffled_agents.end() && ((fsec)(Time::now() - time)).count() < T)
-    {
+    ConstraintTable constraint_table(instance.num_of_cols, instance.map_size,
+                                     &path_table);
+    while (p != shuffled_agents.end() &&
+           ((fsec)(Time::now() - time)).count() < T) {
         int id = *p;
         if (screen >= 3)
-            cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+            cout << "Remaining agents = " << remaining_agents
+                 << ", remaining time = "
+                 << T - ((fsec)(Time::now() - time)).count() << " seconds. "
+                 << endl
                  << "Agent " << agents[id].id << endl;
         agents[id].path = agents[id].path_planner->findPath(constraint_table);
         if (agents[id].path.empty())
@@ -404,27 +401,24 @@ bool LNS::runPP()
         path_table.insertPath(agents[id].id, agents[id].path);
         ++p;
     }
-    if (remaining_agents == 0 && neighbor.sum_of_costs <= neighbor.old_sum_of_costs) // accept new paths
+    if (remaining_agents == 0 &&
+        neighbor.sum_of_costs <= neighbor.old_sum_of_costs) // accept new paths
     {
         return true;
-    }
-    else // stick to old paths
+    } else // stick to old paths
     {
         if (p != shuffled_agents.end())
             num_of_failures++;
         auto p2 = shuffled_agents.begin();
-        while (p2 != p)
-        {
+        while (p2 != p) {
             int a = *p2;
             path_table.deletePath(agents[a].id, agents[a].path);
             ++p2;
         }
 
-        if (!neighbor.old_paths.empty())
-        {
+        if (!neighbor.old_paths.empty()) {
             p2 = neighbor.agents.begin();
-            for (int i = 0; i < (int)neighbor.agents.size(); i++)
-            {
+            for (int i = 0; i < (int)neighbor.agents.size(); i++) {
                 int a = *p2;
                 agents[a].path = neighbor.old_paths[i];
                 path_table.insertPath(agents[a].id, agents[a].path);
@@ -436,11 +430,10 @@ bool LNS::runPP()
     }
 }
 
-bool LNS::runWinPP()
-{
-    if (planning_period > planning_horizon)
-    {
-        cerr << "Planning period must be less than or equal to planning horizon" << endl;
+bool LNS::runWinPP() {
+    if (planning_period > planning_horizon) {
+        cerr << "Planning period must be less than or equal to planning horizon"
+             << endl;
         exit(1);
     }
 
@@ -460,40 +453,47 @@ bool LNS::runWinPP()
         T = min(T, replan_time_limit); // replan time limit
     auto time = Time::now();
     while (num_agents_at_goal < shuffled_agents.size() &&
-           ((fsec)(Time::now() - time)).count() < T &&
-           remaining_retries > 0)
-    {
+           ((fsec)(Time::now() - time)).count() < T && remaining_retries > 0) {
 
         remaining_agents = (int)shuffled_agents.size();
-        std::random_shuffle(random_begin, shuffled_agents.end()); // shuffle agents
+        std::random_shuffle(random_begin,
+                            shuffled_agents.end()); // shuffle agents
         // reduce priority of agents on goal
-        std::stable_partition(random_begin, shuffled_agents.end(), [&](int id)
-                              {const Agent& agent = agents[id];
-            return !(agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
-                     sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep)); });
+        std::stable_partition(random_begin, shuffled_agents.end(), [&](int id) {
+            const Agent &agent = agents[id];
+            return !(
+                agents[id].path_planner->start_location ==
+                    agents[id].path_planner->goal_location &&
+                sipp_intervals.is_location_clear(
+                    agents[id].path_planner->start_location, current_timestep));
+        });
 
-        for (auto p = shuffled_agents.begin(); p != shuffled_agents.end(); p++)
-        {
+        for (auto p = shuffled_agents.begin(); p != shuffled_agents.end();
+             p++) {
             int id = *p;
             if (screen >= 3)
-                cout << "Remaining agents = " << remaining_agents << ", remaining time = " << T - ((fsec)(Time::now() - time)).count() << " seconds. " << endl
+                cout << "Remaining agents = " << remaining_agents
+                     << ", remaining time = "
+                     << T - ((fsec)(Time::now() - time)).count() << " seconds. "
+                     << endl
                      << "Agent " << agents[id].id << endl;
 
-            agents[id].path = agents[id].path_planner->findPath(open_list, sipp_intervals, memory_pool, current_timestep, planning_horizon);
+            agents[id].path = agents[id].path_planner->findPath(
+                open_list, sipp_intervals, memory_pool, current_timestep,
+                planning_horizon);
 
             // Agent unable to find a path for window
-            if (agents[id].path.empty())
-            {
-                if (screen >= 2)
-                {
+            if (agents[id].path.empty()) {
+                if (screen >= 2) {
                     cout << "Agent Failed: " << agents[id].id << endl;
                     // sipp_intervals.validate(agents[id].path_planner->start_location);
                 }
 
-                for (auto rp = shuffled_agents.begin(); rp != p; rp++)
-                {
+                for (auto rp = shuffled_agents.begin(); rp != p; rp++) {
                     int r_id = *rp;
-                    sipp_intervals.remove_path(agents[r_id].id, agents[r_id].path, current_timestep, 0, planning_horizon);
+                    sipp_intervals.remove_path(
+                        agents[r_id].id, agents[r_id].path, current_timestep, 0,
+                        planning_horizon);
                 }
 
                 std::rotate(shuffled_agents.begin(), p, p + 1);
@@ -503,43 +503,54 @@ bool LNS::runWinPP()
                 break;
             }
 
-            sipp_intervals.insert_path(agents[id].id, agents[id].path, current_timestep, planning_horizon);
+            sipp_intervals.insert_path(agents[id].id, agents[id].path,
+                                       current_timestep, planning_horizon);
             remaining_agents--;
         }
 
         // Check if all agents have a path for the window
-        if (remaining_agents == 0)
-        {
-            num_agents_at_goal = 0; // Assume no agents are currently at their goal locations
+        if (remaining_agents == 0) {
+            num_agents_at_goal =
+                0; // Assume no agents are currently at their goal locations
             neighbor.sum_of_costs = 0;
-            for (int id : neighbor.agents)
-            {
-                int start_index = (planning_phases > 0 && agents[id].path.size() > 1) ? 1 : 0;
+            for (int id : neighbor.agents) {
+                int start_index =
+                    (planning_phases > 0 && agents[id].path.size() > 1) ? 1 : 0;
                 // Resize vector to account for next window.
                 // int window_end_index =
                 //     min(planning_period, (int)agents[id].path.size() - 1);
-                accumulated_paths[id].resize((int)accumulated_paths[id].size() + planning_period + 1 - start_index,
+                accumulated_paths[id].resize((int)accumulated_paths[id].size() +
+                                                 planning_period + 1 -
+                                                 start_index,
                                              agents[id].path[planning_period]);
 
                 // Add new plan onto the end of previous plan
-                for (int loc = start_index; loc < planning_period + start_index; loc++)
-                    {accumulated_paths[id][planning_phases * planning_period + loc] = agents[id].path[loc];}
+                for (int loc = start_index; loc < planning_period + start_index;
+                     loc++) {
+                    accumulated_paths[id][planning_phases * planning_period +
+                                          loc] = agents[id].path[loc];
+                }
 
                 // Move agent to next planning phase and check if at goal
-                sipp_intervals.remove_path(agents[id].id, agents[id].path, current_timestep, planning_period, planning_horizon);
+                sipp_intervals.remove_path(agents[id].id, agents[id].path,
+                                           current_timestep, planning_period,
+                                           planning_horizon);
                 // Check if agent is at goal
-                agents[id].path_planner->start_location = agents[id].path[planning_period].location;
-                if (agents[id].path_planner->start_location == agents[id].path_planner->goal_location &&
-                    sipp_intervals.is_location_clear(agents[id].path_planner->start_location, current_timestep + planning_period))
-                {
+                agents[id].path_planner->start_location =
+                    agents[id].path[planning_period].location;
+                if (agents[id].path_planner->start_location ==
+                        agents[id].path_planner->goal_location &&
+                    sipp_intervals.is_location_clear(
+                        agents[id].path_planner->start_location,
+                        current_timestep + planning_period)) {
                     num_agents_at_goal++;
                 }
 
-                // compute sum of costs to check if new plan is worse than old plan
-                for (int t = accumulated_paths[id].size() - 1; t >= 0; t--)
-                {
-                    if (accumulated_paths[id][t].location != agents[id].path_planner->goal_location)
-                    {
+                // compute sum of costs to check if new plan is worse than old
+                // plan
+                for (int t = accumulated_paths[id].size() - 1; t >= 0; t--) {
+                    if (accumulated_paths[id][t].location !=
+                        agents[id].path_planner->goal_location) {
                         neighbor.sum_of_costs += t + 1;
                         break;
                     }
@@ -550,7 +561,8 @@ bool LNS::runWinPP()
                 break;
 
             if (screen >= 2)
-                cout << "Planning Window: " << planning_phases << " Complete" << endl;
+                cout << "Planning Window: " << planning_phases << " Complete"
+                     << endl;
 
             planning_phases++;
             remaining_retries = (int)shuffled_agents.size();
@@ -560,64 +572,67 @@ bool LNS::runWinPP()
     }
 
     // All Agents are at their goal
-    if (num_agents_at_goal == neighbor.agents.size())
-    {
+    if (num_agents_at_goal == neighbor.agents.size()) {
         neighbor.sum_of_costs = 0;
-        for (int id : neighbor.agents)
-        {
+        for (int id : neighbor.agents) {
             // Prune waiting at goal from end of plan.
-            for (int time_step = (int)accumulated_paths[id].size() - 1; time_step >= 0; time_step--)
-            {
-                if (accumulated_paths[id][time_step].location != agents[id].path_planner->goal_location)
-                {
-                    sipp_intervals.remove_path(agents[id].id, accumulated_paths[id], 0, time_step + 1);
+            for (int time_step = (int)accumulated_paths[id].size() - 1;
+                 time_step >= 0; time_step--) {
+                if (accumulated_paths[id][time_step].location !=
+                    agents[id].path_planner->goal_location) {
+                    sipp_intervals.remove_path(
+                        agents[id].id, accumulated_paths[id], 0, time_step + 1);
                     accumulated_paths[id].resize(time_step + 2);
                     accumulated_paths[id].shrink_to_fit();
                     break;
                 }
             }
 
-            agents[id].path_planner->start_location = accumulated_paths[id].at(0).location;
+            agents[id].path_planner->start_location =
+                accumulated_paths[id].at(0).location;
             agents[id].path = accumulated_paths[id];
             neighbor.sum_of_costs += agents[id].path.size() - 1;
-            sipp_intervals.reserve_goal(agents[id].id, agents[id].path.back().location, agents[id].path.size() - 1);
+            sipp_intervals.reserve_goal(agents[id].id,
+                                        agents[id].path.back().location,
+                                        agents[id].path.size() - 1);
         }
-        if (neighbor.sum_of_costs <= neighbor.old_sum_of_costs) // accept new paths
+        if (neighbor.sum_of_costs <=
+            neighbor.old_sum_of_costs) // accept new paths
         {
             return true;
         }
     }
 
     // Remove new paths and add back old paths
-    for (int id : neighbor.agents)
-    {
+    for (int id : neighbor.agents) {
         sipp_intervals.remove_path(agents[id].id, accumulated_paths[id]);
-        if (num_agents_at_goal == neighbor.agents.size())
-        {
-            sipp_intervals.unreserve_goal(agents[id].id, accumulated_paths[id].back().location, accumulated_paths[id].size() - 1);
+        if (num_agents_at_goal == neighbor.agents.size()) {
+            sipp_intervals.unreserve_goal(agents[id].id,
+                                          accumulated_paths[id].back().location,
+                                          accumulated_paths[id].size() - 1);
         }
 #ifdef DEBUG_MODE
         sipp_intervals.agent_removed(agents[id].id);
 #endif
     }
 
-    if (!neighbor.old_paths.empty())
-    {
-        for (int index = 0; index < neighbor.agents.size(); index++)
-        {
+    if (!neighbor.old_paths.empty()) {
+        for (int index = 0; index < neighbor.agents.size(); index++) {
             int id = neighbor.agents[index];
             agents[id].path = neighbor.old_paths[index];
-            agents[id].path_planner->start_location = agents[id].path[0].location;
-            sipp_intervals.insert_path(id, agents[id].path, 0, agents[id].path.size() - 2);
-            sipp_intervals.reserve_goal(id, agents[id].path.back().location, agents[id].path.size() - 1);
+            agents[id].path_planner->start_location =
+                agents[id].path[0].location;
+            sipp_intervals.insert_path(id, agents[id].path, 0,
+                                       agents[id].path.size() - 2);
+            sipp_intervals.reserve_goal(id, agents[id].path.back().location,
+                                        agents[id].path.size() - 1);
         }
         neighbor.sum_of_costs = neighbor.old_sum_of_costs;
     }
     return false;
 }
 
-bool LNS::runPPS()
-{
+bool LNS::runPPS() {
     auto shuffled_agents = neighbor.agents;
     std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
 
@@ -634,8 +649,7 @@ bool LNS::runPPS()
         updatePIBTResult(P.getA(), shuffled_agents);
     return result;
 }
-bool LNS::runPIBT()
-{
+bool LNS::runPIBT() {
     auto shuffled_agents = neighbor.agents;
     std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
 
@@ -650,8 +664,7 @@ bool LNS::runPIBT()
         updatePIBTResult(P.getA(), shuffled_agents);
     return result;
 }
-bool LNS::runWinPIBT()
-{
+bool LNS::runWinPIBT() {
     auto shuffled_agents = neighbor.agents;
     std::random_shuffle(shuffled_agents.begin(), shuffled_agents.end());
 
@@ -668,8 +681,7 @@ bool LNS::runWinPIBT()
     return result;
 }
 
-MAPF LNS::preparePIBTProblem(vector<int> &shuffled_agents)
-{
+MAPF LNS::preparePIBTProblem(vector<int> &shuffled_agents) {
 
     // seed for problem and graph
     auto MT_PG = new std::mt19937(0);
@@ -680,55 +692,54 @@ MAPF LNS::preparePIBTProblem(vector<int> &shuffled_agents)
     std::vector<Task *> T;
     PIBT_Agents A;
 
-    for (int i : shuffled_agents)
-    {
+    for (int i : shuffled_agents) {
         assert(G->existNode(agents[i].path_planner->start_location));
         assert(G->existNode(agents[i].path_planner->goal_location));
-        auto a = new PIBT_Agent(G->getNode(agents[i].path_planner->start_location));
+        auto a =
+            new PIBT_Agent(G->getNode(agents[i].path_planner->start_location));
 
-        //        PIBT_Agent* a = new PIBT_Agent(G->getNode( agents[i].path_planner.start_location));
+        //        PIBT_Agent* a = new PIBT_Agent(G->getNode(
+        //        agents[i].path_planner.start_location));
         A.push_back(a);
         Task *tau = new Task(G->getNode(agents[i].path_planner->goal_location));
 
         T.push_back(tau);
-        if (screen >= 5)
-        {
-            cout << "Agent " << i << " start: " << a->getNode()->getPos() << " goal: " << tau->getG().front()->getPos() << endl;
+        if (screen >= 5) {
+            cout << "Agent " << i << " start: " << a->getNode()->getPos()
+                 << " goal: " << tau->getG().front()->getPos() << endl;
         }
     }
 
     return MAPF(G, A, T, MT_PG);
 }
 
-void LNS::updatePIBTResult(const PIBT_Agents &A, vector<int> &shuffled_agents)
-{
+void LNS::updatePIBTResult(const PIBT_Agents &A, vector<int> &shuffled_agents) {
     int soc = 0;
-    for (int i = 0; i < A.size(); i++)
-    {
+    for (int i = 0; i < A.size(); i++) {
         int a_id = shuffled_agents[i];
 
         agents[a_id].path.resize(A[i]->getHist().size());
         int last_goal_visit = 0;
         if (screen >= 2)
             std::cout << A[i]->logStr() << std::endl;
-        for (int n_index = 0; n_index < A[i]->getHist().size(); n_index++)
-        {
+        for (int n_index = 0; n_index < A[i]->getHist().size(); n_index++) {
             auto n = A[i]->getHist()[n_index];
             agents[a_id].path[n_index] = PathEntry(n->v->getId());
 
             // record the last time agent reach the goal from a non-goal vertex.
-            if (agents[a_id].path_planner->goal_location == n->v->getId() && n_index - 1 >= 0 && agents[a_id].path_planner->goal_location != agents[a_id].path[n_index - 1].location)
+            if (agents[a_id].path_planner->goal_location == n->v->getId() &&
+                n_index - 1 >= 0 &&
+                agents[a_id].path_planner->goal_location !=
+                    agents[a_id].path[n_index - 1].location)
                 last_goal_visit = n_index;
         }
         // resize to last goal visit time
         agents[a_id].path.resize(last_goal_visit + 1);
         if (screen >= 2)
             std::cout << " Length: " << agents[a_id].path.size() << std::endl;
-        if (screen >= 5)
-        {
+        if (screen >= 5) {
             cout << "Agent " << a_id << ":";
-            for (auto loc : agents[a_id].path)
-            {
+            for (auto loc : agents[a_id].path) {
                 cout << loc.location << ",";
             }
             cout << endl;
@@ -740,11 +751,9 @@ void LNS::updatePIBTResult(const PIBT_Agents &A, vector<int> &shuffled_agents)
     neighbor.sum_of_costs = soc;
 }
 
-void LNS::chooseDestroyHeuristicbyALNS()
-{
+void LNS::chooseDestroyHeuristicbyALNS() {
     rouletteWheel();
-    switch (selected_neighbor)
-    {
+    switch (selected_neighbor) {
     case 0:
         destroy_strategy = RANDOMWALK;
         break;
@@ -760,12 +769,9 @@ void LNS::chooseDestroyHeuristicbyALNS()
     }
 }
 
-bool LNS::generateNeighborByIntersection()
-{
-    if (intersections.empty())
-    {
-        for (int i = 0; i < instance.map_size; i++)
-        {
+bool LNS::generateNeighborByIntersection() {
+    if (intersections.empty()) {
+        for (int i = 0; i < instance.map_size; i++) {
             if (!instance.isObstacle(i) && instance.getDegree(i) > 2)
                 intersections.push_back(i);
         }
@@ -776,24 +782,20 @@ bool LNS::generateNeighborByIntersection()
     std::advance(pt, rand() % intersections.size());
     int location = *pt;
     path_table.get_agents(neighbors_set, neighbor_size, location);
-    if (neighbors_set.size() < neighbor_size)
-    {
+    if (neighbors_set.size() < neighbor_size) {
         set<int> closed;
         closed.insert(location);
         std::queue<int> open;
         open.push(location);
-        while (!open.empty() && (int)neighbors_set.size() < neighbor_size)
-        {
+        while (!open.empty() && (int)neighbors_set.size() < neighbor_size) {
             int curr = open.front();
             open.pop();
-            for (auto next : instance.getNeighbors(curr))
-            {
+            for (auto next : instance.getNeighbors(curr)) {
                 if (closed.count(next) > 0)
                     continue;
                 open.push(next);
                 closed.insert(next);
-                if (instance.getDegree(next) >= 3)
-                {
+                if (instance.getDegree(next) >= 3) {
                     path_table.get_agents(neighbors_set, neighbor_size, next);
                     if ((int)neighbors_set.size() == neighbor_size)
                         break;
@@ -802,19 +804,17 @@ bool LNS::generateNeighborByIntersection()
         }
     }
     neighbor.agents.assign(neighbors_set.begin(), neighbors_set.end());
-    if (neighbor.agents.size() > neighbor_size)
-    {
+    if (neighbor.agents.size() > neighbor_size) {
         std::random_shuffle(neighbor.agents.begin(), neighbor.agents.end());
         neighbor.agents.resize(neighbor_size);
     }
     if (screen >= 2)
-        cout << "Generate " << neighbor.agents.size() << " neighbors by intersection " << location << endl;
+        cout << "Generate " << neighbor.agents.size()
+             << " neighbors by intersection " << location << endl;
     return true;
 }
-bool LNS::generateNeighborByRandomWalk()
-{
-    if (neighbor_size >= (int)agents.size())
-    {
+bool LNS::generateNeighborByRandomWalk() {
+    if (neighbor_size >= (int)agents.size()) {
         neighbor.agents.resize(agents.size());
         for (int i = 0; i < (int)agents.size(); i++)
             neighbor.agents[i] = i;
@@ -827,20 +827,19 @@ bool LNS::generateNeighborByRandomWalk()
 
     set<int> neighbors_set;
     neighbors_set.insert(a);
-    randomWalk(a, agents[a].path[0].location, 0, neighbors_set, neighbor_size, (int)agents[a].path.size() - 1);
+    randomWalk(a, agents[a].path[0].location, 0, neighbors_set, neighbor_size,
+               (int)agents[a].path.size() - 1);
     int count = 0;
-    while (neighbors_set.size() < neighbor_size && count < 10)
-    {
+    while (neighbors_set.size() < neighbor_size && count < 10) {
         int t = rand() % agents[a].path.size();
-        randomWalk(a, agents[a].path[t].location, t, neighbors_set, neighbor_size, (int)agents[a].path.size() - 1);
+        randomWalk(a, agents[a].path[t].location, t, neighbors_set,
+                   neighbor_size, (int)agents[a].path.size() - 1);
         count++;
         // select the next agent randomly
         int idx = rand() % neighbors_set.size();
         int i = 0;
-        for (auto n : neighbors_set)
-        {
-            if (i == idx)
-            {
+        for (auto n : neighbors_set) {
+            if (i == idx) {
                 a = i;
                 break;
             }
@@ -851,30 +850,29 @@ bool LNS::generateNeighborByRandomWalk()
         return false;
     neighbor.agents.assign(neighbors_set.begin(), neighbors_set.end());
     if (screen >= 2)
-        cout << "Generate " << neighbor.agents.size() << " neighbors by random walks of agent " << a
-             << "(" << agents[a].path_planner->my_heuristic[agents[a].path_planner->start_location]
+        cout << "Generate " << neighbor.agents.size()
+             << " neighbors by random walks of agent " << a << "("
+             << agents[a]
+                    .path_planner
+                    ->my_heuristic[agents[a].path_planner->start_location]
              << "->" << agents[a].path.size() - 1 << ")" << endl;
 
     return true;
 }
 
-int LNS::findMostDelayedAgent()
-{
+int LNS::findMostDelayedAgent() {
     int a = -1;
     int max_delays = -1;
-    for (int i = 0; i < agents.size(); i++)
-    {
+    for (int i = 0; i < agents.size(); i++) {
         if (tabu_list.find(i) != tabu_list.end())
             continue;
         int delays = agents[i].getNumOfDelays();
-        if (max_delays < delays)
-        {
+        if (max_delays < delays) {
             a = i;
             max_delays = delays;
         }
     }
-    if (max_delays == 0)
-    {
+    if (max_delays == 0) {
         tabu_list.clear();
         return -1;
     }
@@ -884,13 +882,11 @@ int LNS::findMostDelayedAgent()
     return a;
 }
 
-int LNS::findRandomAgent() const
-{
+int LNS::findRandomAgent() const {
     int a = 0;
     int pt = rand() % (sum_of_costs - sum_of_distances) + 1;
     int sum = 0;
-    for (; a < (int)agents.size(); a++)
-    {
+    for (; a < (int)agents.size(); a++) {
         sum += agents[a].getNumOfDelays();
         if (sum >= pt)
             break;
@@ -899,24 +895,24 @@ int LNS::findRandomAgent() const
     return a;
 }
 
-// a random walk with path that is shorter than upperbound and has conflicting with neighbor_size agents
+// a random walk with path that is shorter than upperbound and has conflicting
+// with neighbor_size agents
 void LNS::randomWalk(int agent_id, int start_location, int start_timestep,
-                     set<int> &conflicting_agents, int neighbor_size, int upperbound)
-{
+                     set<int> &conflicting_agents, int neighbor_size,
+                     int upperbound) {
     int loc = start_location;
-    for (int t = start_timestep; t < upperbound; t++)
-    {
+    for (int t = start_timestep; t < upperbound; t++) {
         auto next_locs = instance.getNeighbors(loc);
         next_locs.push_back(loc);
-        while (!next_locs.empty())
-        {
+        while (!next_locs.empty()) {
             int step = rand() % next_locs.size();
             auto it = next_locs.begin();
             advance(it, step);
             int next_h_val = agents[agent_id].path_planner->my_heuristic[*it];
             if (t + 1 + next_h_val < upperbound) // move to this location
             {
-                path_table.getConflictingAgents(agent_id, conflicting_agents, loc, *it, t + 1);
+                path_table.getConflictingAgents(agent_id, conflicting_agents,
+                                                loc, *it, t + 1);
                 loc = *it;
                 break;
             }
@@ -927,82 +923,88 @@ void LNS::randomWalk(int agent_id, int start_location, int start_timestep,
     }
 }
 
-void LNS::validateSolution() const
-{
+void LNS::validateSolution() const {
     int sum = 0;
-    for (const auto &a1_ : agents)
-    {
-        if (a1_.path.empty())
-        {
+    for (const auto &a1_ : agents) {
+        if (a1_.path.empty()) {
             cerr << "No solution for agent " << a1_.id << endl;
             exit(-1);
-        }
-        else if (a1_.path_planner->start_location != a1_.path.front().location)
-        {
-            cerr << "The path of agent " << a1_.id << " starts from location " << a1_.path.front().location
-                 << ", which is different from its start location " << a1_.path_planner->start_location << endl;
+        } else if (a1_.path_planner->start_location !=
+                   a1_.path.front().location) {
+            cerr << "The path of agent " << a1_.id << " starts from location "
+                 << a1_.path.front().location
+                 << ", which is different from its start location "
+                 << a1_.path_planner->start_location << endl;
+            exit(-1);
+        } else if (a1_.path_planner->goal_location !=
+                   a1_.path.back().location) {
+            cerr << "The path of agent " << a1_.id << " ends at location "
+                 << a1_.path.back().location
+                 << ", which is different from its goal location "
+                 << a1_.path_planner->goal_location << endl;
             exit(-1);
         }
-        else if (a1_.path_planner->goal_location != a1_.path.back().location)
-        {
-            cerr << "The path of agent " << a1_.id << " ends at location " << a1_.path.back().location
-                 << ", which is different from its goal location " << a1_.path_planner->goal_location << endl;
-            exit(-1);
-        }
-        for (int t = 1; t < (int)a1_.path.size(); t++)
-        {
-            if (!instance.validMove(a1_.path[t - 1].location, a1_.path[t].location))
-            {
+        for (int t = 1; t < (int)a1_.path.size(); t++) {
+            if (!instance.validMove(a1_.path[t - 1].location,
+                                    a1_.path[t].location)) {
                 cerr << "The path of agent " << a1_.id << " jump from "
-                     << a1_.path[t - 1].location << " to " << a1_.path[t].location
-                     << " between timesteps " << t - 1 << " and " << t << endl;
+                     << a1_.path[t - 1].location << " to "
+                     << a1_.path[t].location << " between timesteps " << t - 1
+                     << " and " << t << endl;
                 exit(-1);
             }
         }
         sum += (int)a1_.path.size() - 1;
-        for (const auto &a2_ : agents)
-        {
+        for (const auto &a2_ : agents) {
             if (a1_.id >= a2_.id || a2_.path.empty())
                 continue;
             const auto &a1 = a1_.path.size() <= a2_.path.size() ? a1_ : a2_;
             const auto &a2 = a1_.path.size() <= a2_.path.size() ? a2_ : a1_;
             int t = 1;
-            for (; t < (int)a1.path.size(); t++)
-            {
-                if (a1.path[t].location == a2.path[t].location) // vertex conflict
+            for (; t < (int)a1.path.size(); t++) {
+                if (a1.path[t].location ==
+                    a2.path[t].location) // vertex conflict
                 {
-                    cerr << "Find a vertex conflict between agents " << a1.id << " and " << a2.id << " at location " << a1.path[t].location << " at timestep " << t << endl;
+                    cerr << "Find a vertex conflict between agents " << a1.id
+                         << " and " << a2.id << " at location "
+                         << a1.path[t].location << " at timestep " << t << endl;
                     exit(-1);
-                }
-                else if (a1.path[t].location == a2.path[t - 1].location &&
-                         a1.path[t - 1].location == a2.path[t].location) // edge conflict
+                } else if (a1.path[t].location == a2.path[t - 1].location &&
+                           a1.path[t - 1].location ==
+                               a2.path[t].location) // edge conflict
                 {
-                    cerr << "Find an edge conflict between agents " << a1.id << " and " << a2.id << " at edge (" << a1.path[t - 1].location << "," << a1.path[t].location << ") at timestep " << t << endl;
+                    cerr << "Find an edge conflict between agents " << a1.id
+                         << " and " << a2.id << " at edge ("
+                         << a1.path[t - 1].location << ","
+                         << a1.path[t].location << ") at timestep " << t
+                         << endl;
                     exit(-1);
                 }
             }
             int target = a1.path.back().location;
-            for (; t < (int)a2.path.size(); t++)
-            {
+            for (; t < (int)a2.path.size(); t++) {
                 if (a2.path[t].location == target) // target conflict
                 {
-                    cerr << "Find a target conflict where agent " << a2.id << " (of length " << a2.path.size() - 1 << ") traverses agent " << a1.id << " (of length " << a1.path.size() - 1 << ")'s target location " << target << " at timestep " << t << endl;
+                    cerr << "Find a target conflict where agent " << a2.id
+                         << " (of length " << a2.path.size() - 1
+                         << ") traverses agent " << a1.id << " (of length "
+                         << a1.path.size() - 1 << ")'s target location "
+                         << target << " at timestep " << t << endl;
                     exit(-1);
                 }
             }
         }
     }
-    if (sum_of_costs != sum)
-    {
-        cerr << "The computed sum of costs " << sum_of_costs << " is different from the sum of the paths in the solution " << sum << endl;
+    if (sum_of_costs != sum) {
+        cerr << "The computed sum of costs " << sum_of_costs
+             << " is different from the sum of the paths in the solution "
+             << sum << endl;
         exit(-1);
     }
 }
 
-void LNS::writeIterStatsToFile(const string &file_name) const
-{
-    if (init_lns != nullptr)
-    {
+void LNS::writeIterStatsToFile(const string &file_name) const {
+    if (init_lns != nullptr) {
         init_lns->writeIterStatsToFile(file_name + "-initLNS.csv");
     }
     if (iteration_stats.size() <= 1)
@@ -1022,18 +1024,19 @@ void LNS::writeIterStatsToFile(const string &file_name) const
            << "sum of distances,"
            << "MAPF algorithm" << endl;
 
-    for (const auto &data : iteration_stats)
-    {
-        output << data.num_of_agents << "," << data.sum_of_costs << "," << data.runtime << "," << max(sum_of_costs_lowerbound, sum_of_distances) << "," << sum_of_distances << "," << data.algorithm << endl;
+    for (const auto &data : iteration_stats) {
+        output << data.num_of_agents << "," << data.sum_of_costs << ","
+               << data.runtime << ","
+               << max(sum_of_costs_lowerbound, sum_of_distances) << ","
+               << sum_of_distances << "," << data.algorithm << endl;
     }
     output.close();
 }
 
-void LNS::writeResultToFile(const string &file_name) const
-{
-    if (init_lns != nullptr)
-    {
-        init_lns->writeResultToFile(file_name + "-initLNS.csv", sum_of_distances, preprocessing_time);
+void LNS::writeResultToFile(const string &file_name) const {
+    if (init_lns != nullptr) {
+        init_lns->writeResultToFile(file_name + "-initLNS.csv",
+                                    sum_of_distances, preprocessing_time);
     }
     string name = file_name;
     if (use_init_lns or num_of_iterations > 0)
@@ -1043,21 +1046,24 @@ void LNS::writeResultToFile(const string &file_name) const
     std::ifstream infile(name);
     bool exist = infile.good();
     infile.close();
-    if (!exist)
-    {
+    if (!exist) {
         ofstream addHeads(name);
-        addHeads << "runtime,solution cost,initial solution cost,lower bound,sum of distance,"
-                 << "iterations,"
-                 << "num of agents,"
-                 << "group size,"
-                 << "runtime of initial solution,restart times,area under curve,"
-                 << "LL expanded nodes,LL generated,LL reopened,LL runs,"
-                 << "preprocessing runtime,solver name,instance name,planning horizon,planning period" << endl;
+        addHeads
+            << "runtime,solution cost,initial solution cost,lower bound,sum of "
+               "distance,"
+            << "iterations,"
+            << "num of agents,"
+            << "group size,"
+            << "runtime of initial solution,restart times,area under curve,"
+            << "LL expanded nodes,LL generated,LL reopened,LL runs,"
+            << "preprocessing runtime,solver name,instance name,planning "
+               "horizon,planning period"
+            << endl;
         addHeads.close();
     }
-    uint64_t num_LL_expanded = 0, num_LL_generated = 0, num_LL_reopened = 0, num_LL_runs = 0;
-    for (auto &agent : agents)
-    {
+    uint64_t num_LL_expanded = 0, num_LL_generated = 0, num_LL_reopened = 0,
+             num_LL_runs = 0;
+    for (auto &agent : agents) {
         agent.path_planner->reset();
         num_LL_expanded += agent.path_planner->accumulated_num_expanded;
         num_LL_generated += agent.path_planner->accumulated_num_generated;
@@ -1065,26 +1071,33 @@ void LNS::writeResultToFile(const string &file_name) const
         num_LL_runs += agent.path_planner->num_runs;
     }
     double auc = 0;
-    if (!iteration_stats.empty())
-    {
+    if (!iteration_stats.empty()) {
         auto prev = iteration_stats.begin();
         auto curr = prev;
         ++curr;
-        while (curr != iteration_stats.end() && curr->runtime < time_limit)
-        {
-            auc += (prev->sum_of_costs - sum_of_distances) * (curr->runtime - prev->runtime);
+        while (curr != iteration_stats.end() && curr->runtime < time_limit) {
+            auc += (prev->sum_of_costs - sum_of_distances) *
+                   (curr->runtime - prev->runtime);
             prev = curr;
             ++curr;
         }
-        auc += (prev->sum_of_costs - sum_of_distances) * (time_limit - prev->runtime);
+        auc += (prev->sum_of_costs - sum_of_distances) *
+               (time_limit - prev->runtime);
     }
     ofstream stats(name, std::ios::app);
-    stats << runtime << "," << sum_of_costs << "," << initial_sum_of_costs << "," << max(sum_of_distances, sum_of_costs_lowerbound) << "," << sum_of_distances << "," << iteration_stats.size() << "," << (int)agents.size() << "," << average_group_size << "," << initial_solution_runtime << "," << restart_times << "," << auc << "," << num_LL_expanded << "," << num_LL_generated << "," << num_LL_reopened << "," << num_LL_runs << "," << preprocessing_time << "," << getSolverName() << "," << instance.getInstanceName() << "," << planning_horizon << "," << planning_period << endl;
+    stats << runtime << "," << sum_of_costs << "," << initial_sum_of_costs
+          << "," << max(sum_of_distances, sum_of_costs_lowerbound) << ","
+          << sum_of_distances << "," << iteration_stats.size() << ","
+          << (int)agents.size() << "," << average_group_size << ","
+          << initial_solution_runtime << "," << restart_times << "," << auc
+          << "," << num_LL_expanded << "," << num_LL_generated << ","
+          << num_LL_reopened << "," << num_LL_runs << "," << preprocessing_time
+          << "," << getSolverName() << "," << instance.getInstanceName() << ","
+          << planning_horizon << "," << planning_period << endl;
     stats.close();
 }
 
-void LNS::writePathsToFile(const string &file_name) const
-{
+void LNS::writePathsToFile(const string &file_name) const {
     std::ofstream output;
     output.open(file_name);
     // header
@@ -1094,29 +1107,28 @@ void LNS::writePathsToFile(const string &file_name) const
 
     bool remaining_agents = true;
     int t = 0;
-    while (remaining_agents && t < 10)
-    {
+    while (remaining_agents && t < 10) {
         remaining_agents = false;
 
         output << "- id: " << '"' << t << '"' << endl;
         output << "  type: timestep" << endl;
 
-    for (const auto &agent : agents)
-    {
-    if (t < agent.path.size())
-                {
-                    remaining_agents = true;
+        for (const auto &agent : agents) {
+            if (t < agent.path.size()) {
+                remaining_agents = true;
 
-                    PathEntry state = agent.path[t];
+                PathEntry state = agent.path[t];
 
-                    output << "  " << '"' << agent.id << '"' << ':' << endl;
+                output << "  " << '"' << agent.id << '"' << ':' << endl;
 
-                    output << "  - x: " << instance.getRowCoordinate(state.location) << endl;
-                    output << "    y: " << instance.getColCoordinate(state.location) << endl;
-                }
+                output << "  - x: " << instance.getRowCoordinate(state.location)
+                       << endl;
+                output << "    y: " << instance.getColCoordinate(state.location)
+                       << endl;
             }
+        }
 
-            t++;
+        t++;
     }
     output.close();
 }

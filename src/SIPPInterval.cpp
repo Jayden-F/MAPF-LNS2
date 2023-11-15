@@ -133,7 +133,11 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep) {
 #ifdef DEBUG_MODE
     this->validate(location);
 #endif
-    iterator current_iterator = location_intervals.upper_bound(timestep);
+
+    if (location_intervals.empty()) {
+        return;
+    }
+    iterator current_iterator = location_intervals.end();
     current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
     iterator previous_iterator = current_iterator;
@@ -182,7 +186,7 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep) {
         exit(-1);
     }
 
-    iterator current_iterator = location_intervals.upper_bound(timestep);
+    iterator current_iterator = location_intervals.end();
     current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
 

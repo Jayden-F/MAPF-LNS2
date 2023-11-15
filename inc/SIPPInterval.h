@@ -44,8 +44,8 @@ class SIPPIntervals {
         if (location_intervals.empty()) {
             init_location(location);
         }
-        return location_intervals.rbegin()->second.low <= timestep &&
-               location_intervals.rbegin()->second.agent_id == NO_AGENT;
+        return (location_intervals.rbegin()->second.low <= timestep &&
+                location_intervals.rbegin()->second.agent_id == NO_AGENT);
     }
     const vector<iterator> get_intervals(int from, iterator interval,
                                          int timestep, int to);
@@ -65,14 +65,13 @@ class SIPPIntervals {
     //                    intervals_[i][j].agent_id == NO_AGENT);
     // }
     void agent_removed(int agent_id) {
-        for (int location = 0; location < intervals_.size(); location++) {
-            for (int interval = 0; interval < intervals_[location].size();
-                 interval++) {
-                if (intervals_[location][interval].agent_id == agent_id) {
+        for (auto location : intervals_) {
+            for (auto it = location.begin(); it != location.end(); it++) {
+                if (it->second.agent_id == agent_id) {
                     cout << "agent " << agent_id
                          << " is not removed from the location " << location
-                         << " [" << intervals_[location][interval].low << ","
-                         << intervals_[location][interval].high << endl;
+                         << " [" << it->second.low << "," << it->second.high
+                         << endl;
                     exit(1);
                 }
             }
@@ -123,7 +122,3 @@ class SIPPIntervals {
     //     return -1;
     //   }
 };
-
-// Iteration 23, group size = 3, solution cost = 80279, remaining time = 594.479
-// Find a target conflict where agent 27(of length 2772)traverses agent 17(of
-// length 1037)'s target location 214014 at timestep 1180
