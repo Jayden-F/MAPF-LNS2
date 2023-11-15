@@ -1,4 +1,6 @@
 #pragma once
+#include "btree.h"
+#include "btree/btree_container.h"
 #include "btree/btree_map.h"
 #include "common.h"
 #include <utility>
@@ -16,30 +18,37 @@ struct SIPPInterval {
         : low(low), high(high), agent_id(agent_id) {}
 };
 
+typedef btree::btree_iterator<
+    btree::btree_node<btree::btree_map_params<
+        int, SIPPInterval, std::less<int>,
+        std::allocator<std::pair<const int, SIPPInterval>>, 256>>,
+    pair<const int, SIPPInterval> &, pair<const int, SIPPInterval> *>
+    iterator;
+
 class SIPPIntervals {
-  public:
-    friend class TestSIPPInterval;
 
   private:
     vector<btree::btree_map<int, SIPPInterval>> intervals_;
-    vector<int> clear_intervals_;
+    vector<iterator> clear_intervals_;
 
   public:
     // in the constructor initalise intervals_ with map_size
     SIPPIntervals(int map_size) : intervals_(map_size), clear_intervals_(0) {}
-    const int get_first_interval(int location, int start_time = 0);
+    bool get_first_interval(int location, int start_time,
+                            iterator &return_interval);
     bool is_location_clear(int location, int timestep) {
         auto &intervals = intervals_[location];
+
         if (intervals.empty())
             init_location(location);
         return intervals.rbegin()->second.low <= timestep &&
                intervals.rbegin()->second.agent_id == NO_AGENT;
     }
-    const vector<int> get_intervals(int from, int interval, int timestep,
-                                    int to);
-    inline const SIPPInterval *get_interval(int location, int index) {
-        return &intervals_[location][index];
-    }
+    const vector<iterator> get_intervals(int from, iterator interval,
+                                         int timestep, int to);
+    // inline const SIPPInterval *get_interval(int location, int index) {
+    //     return &intervals_[location][index];
+    // }
     void insert_path(int agent_id, Path &path, int start = 0,
                      int horizon = MAX_TIMESTEP);
     void remove_path(int agent_id, Path &path, int start = 0, int period = 0,
@@ -75,7 +84,7 @@ class SIPPIntervals {
   private:
     void init_location(int location) {
         intervals_[location].insert(
-            std::make_pair(0, std::move(SIPPInterval(0, MAX_TIMESTEP))));
+            std::make_pair(0, SIPPInterval(0, MAX_TIMESTEP)));
     }
     void split(int agent_id, int location, int low, int high);
     void merge(int agent_id, int location, int low, int high);

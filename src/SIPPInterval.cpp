@@ -1,61 +1,81 @@
 #include "SIPPInterval.h"
 #include "common.h"
+#include <iterator>
 #include <utility>
 
 // #define DEBUG_MODE
 
-const int SIPPIntervals::get_first_interval(int location, int start_time) {
+bool SIPPIntervals::get_first_interval(int location, int start_time,
+                                       iterator &return_interval) {
     auto &location_intervals = intervals_[location];
 
     if (location_intervals.empty())
         this->init_location(location);
 
-    int index = location_intervals.lower_bound(start_time).position;
+    iterator interval_iterator = location_intervals.upper_bound(start_time);
+    interval_iterator--;
     // int index(this->binary_search(location, start_time));
 
-    if (location_intervals[index].agent_id != NO_AGENT)
-        return -1;
+    if (interval_iterator->second.agent_id != NO_AGENT)
+        return false;
 
-    return index;
+    return_interval = interval_iterator;
+    return true;
 }
 
-const vector<int> SIPPIntervals::get_intervals(int from, int interval,
-                                               int timestep, int to) {
+const vector<iterator>
+SIPPIntervals::get_intervals(int from, iterator from_current_iterator,
+                             int timestep, int to) {
 
     if (intervals_[to].empty())
         this->init_location(to);
 
-    auto low_iterator = this->intervals_[to].lower_bound(timestep);
+    // cout << from_current_iterator->first << " "
+    //      << from_current_iterator->second.low << " "
+    //      << from_current_iterator->second.high << " "
+    //      << from_current_iterator->second.agent_id << endl;
+    // for (auto i = intervals_[to].begin(); i != intervals_[to].end(); i++) {
+    //     cout << i->first << " " << i->second.low << " " << i->second.high <<
+    //     " "
+    //          << i->second.agent_id << endl;
+    // }
 
-    auto high_iterator =
-        this->intervals_[to].lower_bound(intervals_[from][interval].high);
+    iterator low_iterator = this->intervals_[to].upper_bound(timestep);
+    low_iterator--;
+    iterator high_iterator =
+        this->intervals_[to].upper_bound(from_current_iterator->second.high);
 
     this->clear_intervals_.clear();
     this->clear_intervals_.reserve(intervals_[to].size());
 
-    for (auto current_iterator = low_iterator;
-         current_iterator != high_iterator; current_iterator++) {
+    iterator from_previous_iterator = from_current_iterator;
+    from_previous_iterator--;
+    iterator from_next_iterator = from_current_iterator;
+    from_next_iterator++;
 
-        SIPPInterval &current_interval = current_iterator->second;
-        auto previous_iterator = current_iterator--;
-        SIPPInterval &previous_interval = previous_iterator->second;
-        auto next_iterator = current_iterator++;
-        SIPPInterval &next_interval = next_iterator->second;
+    for (iterator to_current_iterator = low_iterator;
+         to_current_iterator != high_iterator; to_current_iterator++) {
 
+        iterator to_previous_iterator = to_current_iterator;
+        to_previous_iterator--;
+        iterator to_next_iterator = to_current_iterator;
+        to_next_iterator++;
         // Vertex Conflict
-        if (next_interval.agent_id != NO_AGENT) {
+        if (to_current_iterator->second.agent_id != NO_AGENT) {
             continue;
         }
         // Edge Conflict
-        if (i != intervals_[to].begin() && i < intervals_[from].size() &&
-            intervals_[to][i - 1].agent_id != NO_AGENT &&
-            intervals_[from][interval + 1].agent_id != NO_AGENT &&
-            intervals_[to][i - 1].agent_id ==
-                intervals_[from][interval + 1].agent_id &&
-            intervals_[from][interval].high == next_interval.low) {
+        if (to_current_iterator != intervals_[to].begin() &&
+            from_next_iterator != intervals_[from].end() &&
+            to_previous_iterator->second.agent_id != NO_AGENT &&
+            from_next_iterator->second.agent_id != NO_AGENT &&
+            to_previous_iterator->second.agent_id ==
+                from_next_iterator->second.agent_id &&
+            from_current_iterator->second.high ==
+                to_current_iterator->second.low) {
             continue;
         }
-        clear_intervals_.push_back(i);
+        clear_intervals_.push_back(to_current_iterator);
     }
     return clear_intervals_;
 }
@@ -113,9 +133,10 @@ void SIPPIntervals::unreserve_goal(int agent_id, int location, int timestep) {
 #ifdef DEBUG_MODE
     this->validate(location);
 #endif
-    auto current_iterator = location_intervals.lower_bound(timestep);
+    iterator current_iterator = location_intervals.upper_bound(timestep);
+    current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
-    auto previous_iterator = current_iterator;
+    iterator previous_iterator = current_iterator;
     previous_iterator--;
     SIPPInterval &previous_interval = previous_iterator->second;
 
@@ -160,7 +181,8 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep) {
         exit(-1);
     }
 
-    auto current_iterator = location_intervals.lower_bound(timestep);
+    iterator current_iterator = location_intervals.upper_bound(timestep);
+    current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
 
     // location does not share timestep
@@ -175,7 +197,7 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep) {
         return;
     }
 
-    auto previous_iterator = current_iterator;
+    iterator previous_iterator = current_iterator;
     previous_iterator--;
     SIPPInterval &previous_interval = previous_iterator->second;
 
@@ -213,7 +235,8 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep) {
 #endif
 
     auto &location_intervals = intervals_[location];
-    auto current_iterator = location_intervals.lower_bound(timestep);
+    iterator current_iterator = location_intervals.upper_bound(timestep);
+    current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
 
     if (current_interval.agent_id != agent_id) {
@@ -222,14 +245,18 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep) {
 
     int length = current_interval.high - current_interval.low;
 
-    auto next_iterator = current_iterator;
+    iterator next_iterator = current_iterator;
     next_iterator++;
     SIPPInterval &next_interval = next_iterator->second;
 
     // Interval early interval off at timestep
-    if (length > 1 && current_interval.low < timestep) {
-        next_interval.low = timestep;
+    if (length > 1 && current_interval.low < timestep &&
+        next_interval.agent_id == NO_AGENT) {
+        int next_high = next_interval.high;
         current_interval.high = timestep;
+        location_intervals.erase(next_iterator);
+        location_intervals.insert(std::make_pair(
+            timestep, SIPPInterval(timestep, next_high, NO_AGENT)));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -237,7 +264,20 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep) {
         return;
     }
 
-    auto previous_iterator = current_iterator;
+    // Interval early interval off at timestep
+    if (length > 1 && current_interval.low < timestep &&
+        next_interval.agent_id != NO_AGENT) {
+        current_interval.high = timestep;
+        location_intervals.insert(std::make_pair(
+            timestep, SIPPInterval(timestep, next_interval.low, NO_AGENT)));
+
+#ifdef DEBUG_MODE
+        this->validate(location);
+#endif
+        return;
+    }
+
+    iterator previous_iterator = current_iterator;
     previous_iterator--;
     SIPPInterval &previous_interval = previous_iterator->second;
 
@@ -246,6 +286,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep) {
         previous_interval.agent_id == NO_AGENT &&
         next_interval.agent_id == NO_AGENT) {
         previous_interval.high = next_interval.high;
+        next_iterator++;
         location_intervals.erase(current_iterator, next_iterator);
 
 #ifdef DEBUG_MODE
@@ -298,7 +339,8 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
     this->validate(location);
 #endif
 
-    auto current_iterator = location_intervals.lower_bound(low);
+    iterator current_iterator = location_intervals.upper_bound(low);
+    current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
 
     if (current_interval.agent_id != NO_AGENT) {
@@ -310,7 +352,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
     // Merge with previous interval removing current interval
     // [1246,1250): 83, [1250,1251): -1 , [1251,1252): 12
     // [1246,1251): 83, [1251,1252): 12
-    auto previous_iterator = current_iterator;
+    iterator previous_iterator = current_iterator;
     previous_iterator--;
     SIPPInterval &previous_interval = previous_iterator->second;
 
@@ -332,7 +374,10 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
     if (current_iterator != location_intervals.begin() &&
         current_interval.low == low && previous_interval.agent_id == agent_id) {
         previous_interval.high = high;
-        current_interval.low = high;
+        SIPPInterval new_interval(high, current_interval.high, NO_AGENT);
+        location_intervals.erase(current_iterator);
+        location_intervals.insert(
+            std::make_pair(high, std::move(new_interval)));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -364,9 +409,11 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
 
     // Interval shares a low interval
     if (current_interval.low == low) {
-        current_interval.low = high;
+        int new_high = current_interval.high;
+        current_interval.high = high;
+        current_interval.agent_id = agent_id;
         location_intervals.insert(
-            std::make_pair(low, SIPPInterval(low, high, agent_id)));
+            std::make_pair(high, SIPPInterval(high, new_high, NO_AGENT)));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -381,7 +428,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
         location_intervals.insert(
             std::make_pair(high, SIPPInterval(high, new_high, NO_AGENT)));
         location_intervals.insert(
-            std::make_pair(high, SIPPInterval(low, high, agent_id)));
+            std::make_pair(low, SIPPInterval(low, high, agent_id)));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -405,17 +452,18 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high) {
 
     assert(!location_intervals.empty());
 
-    auto current_iterator = location_intervals.lower_bound(low);
+    iterator current_iterator = location_intervals.upper_bound(low);
+    current_iterator--;
     SIPPInterval &current_interval = current_iterator->second;
 
     // Interval already removed by truncation
     if (current_interval.agent_id != agent_id)
         return;
 
-    auto previous_iterator = current_iterator;
+    iterator previous_iterator = current_iterator;
     previous_iterator--;
     SIPPInterval &previous_interval = previous_iterator->second;
-    auto next_iterator = current_iterator;
+    iterator next_iterator = current_iterator;
     next_iterator++;
     SIPPInterval &next_interval = next_iterator->second;
 
@@ -425,6 +473,7 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high) {
         previous_interval.agent_id == NO_AGENT &&
         next_interval.agent_id == NO_AGENT) {
         previous_interval.high = next_interval.high;
+        next_iterator++;
         location_intervals.erase(current_iterator, next_iterator);
 
 #ifdef DEBUG_MODE
@@ -450,8 +499,10 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high) {
     // Late
     if (current_iterator != location_intervals.end() &&
         next_interval.agent_id == NO_AGENT) {
-        next_interval.low = current_interval.low;
-        location_intervals.erase(current_iterator);
+        // next_interval.low = current_interval.low;
+        current_interval.high = next_interval.high;
+        current_interval.agent_id = NO_AGENT;
+        location_intervals.erase(next_iterator);
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -468,53 +519,71 @@ void SIPPIntervals::merge(int agent_id, int location, int low, int high) {
     return;
 }
 
-// void SIPPIntervals::validate(int location) const {
-//     cout << "   location: " << location << endl << "   ";
+void SIPPIntervals::validate(int location) const {
 
-//     auto &location_intervals = intervals_[location];
-//     if (location_intervals[0].low != 0) {
-//         cerr << "ERROR: interval does not start at 0" << endl;
-//         exit(1);
-//     }
+    auto &location_intervals = intervals_[location];
+    if (location_intervals.begin()->second.low != 0) {
+        cerr << "ERROR: interval does not start at 0" << endl;
+        exit(1);
+    }
 
-//     for (int i = 0; i < location_intervals.size() - 1; i++)
-//         cout << "[" << location_intervals[i].low << ","
-//              << location_intervals[i].high
-//              << "): " << location_intervals[i].agent_id << " , ";
-//     cout << "[" << location_intervals.back().low << ","
-//          << location_intervals.back().high
-//          << "): " << location_intervals.back().agent_id << " " << endl;
+    cout << "location: " << location << endl;
+    for (auto i = location_intervals.begin(); i != location_intervals.end();
+         i++) {
+        cout << "[" << i->second.low << "," << i->second.high
+             << "):" << i->second.agent_id << ", ";
+    }
+    cout << endl;
+    // for (int i = 0; i < location_intervals.size() - 1; i++)
+    //     cout << "[" << location_intervals[i].low << ","
+    //          << location_intervals[i].high
+    //          << "): " << location_intervals[i].agent_id << " , ";
+    // cout << "[" << location_intervals.back().low << ","
+    //      << location_intervals.back().high
+    //      << "): " << location_intervals.back().agent_id << " " << endl;
 
-//     for (int i = 0; i < location_intervals.size() - 1; i++) {
-//         if (location_intervals[i].low >= location_intervals[i].high) {
-//             cerr << "ERROR: interval " << i << " has low >= high" << endl;
-//             exit(1);
-//         }
-//         if (location_intervals[i].agent_id ==
-//             location_intervals[i + 1].agent_id) {
-//             cerr << "ERROR: interval " << i << " and " << i + 1
-//                  << " have the same agent_id" << endl;
-//             exit(1);
-//         }
-//         if (location_intervals[i].high > location_intervals[i + 1].low) {
-//             cerr << "ERROR: interval " << i << " and " << i + 1 << " overlap"
-//                  << endl;
-//             exit(1);
-//         }
-//         if (location_intervals[i].high != location_intervals[i + 1].low) {
-//             cerr << "ERROR: interval " << i << " and " << i + 1
-//                  << " do not touch" << endl;
-//             exit(1);
-//         }
-//     }
+    for (auto i = location_intervals.begin();; i++) {
+        auto next_iterator = i;
+        next_iterator++;
 
-//     if (location_intervals.back().low >= location_intervals.back().high) {
-//         cerr << "ERROR: interval " << location_intervals.size() - 1
-//              << " has low >= high" << endl;
-//         exit(1);
-//     }
-//     if (location_intervals.back().high != MAX_TIMESTEP) {
-//         cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
-//         exit(1);
-//     }
-// }
+        if (next_iterator == location_intervals.end()) {
+            if (i->second.high != MAX_TIMESTEP) {
+                cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
+                exit(1);
+            }
+            break;
+        }
+
+        if (i->second.low >= i->second.high) {
+            cerr << "ERROR: interval " << i.position << " has low >= high"
+                 << endl;
+            exit(1);
+        }
+        if (i->second.agent_id == next_iterator->second.agent_id) {
+            cerr << "ERROR: interval " << i.position << " and "
+                 << i.position + 1 << " have the same agent_id" << endl;
+            exit(1);
+        }
+        if (i->second.high > next_iterator->second.low) {
+            cerr << "ERROR: interval " << i.position << " and "
+                 << i.position + 1 << " overlap" << endl;
+            exit(1);
+        }
+        if (i->second.high != next_iterator->second.low) {
+            cerr << "ERROR: interval " << i.position << " and "
+                 << i.position + 1 << " do not touch" << endl;
+            exit(1);
+        }
+    }
+
+    // if (location_intervals.end()->second.low >=
+    //     location_intervals.end()->second.high) {
+    //     cerr << "ERROR: interval " << location_intervals.size() - 1
+    //          << " has low >= high" << endl;
+    //     exit(1);
+    // }
+    // if ((location_intervals.end()--)->second.high != MAX_TIMESTEP) {
+    //     cerr << "ERROR: interval does not end at MAX_TIMESTEP" << endl;
+    //     exit(1);
+    // }
+}
