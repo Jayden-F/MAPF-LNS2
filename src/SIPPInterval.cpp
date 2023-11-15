@@ -189,7 +189,8 @@ void SIPPIntervals::reserve_goal(int agent_id, int location, int timestep) {
     if (current_interval.low < timestep) {
         current_interval.high = timestep;
         location_intervals.insert(std::make_pair(
-            timestep, SIPPInterval(timestep, MAX_TIMESTEP, agent_id)));
+            timestep,
+            std::move(SIPPInterval(timestep, MAX_TIMESTEP, agent_id))));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -256,7 +257,7 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep) {
         current_interval.high = timestep;
         location_intervals.erase(next_iterator);
         location_intervals.insert(std::make_pair(
-            timestep, SIPPInterval(timestep, next_high, NO_AGENT)));
+            timestep, std::move(SIPPInterval(timestep, next_high, NO_AGENT))));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -269,7 +270,8 @@ void SIPPIntervals::truncate(int agent_id, int location, int timestep) {
         next_interval.agent_id != NO_AGENT) {
         current_interval.high = timestep;
         location_intervals.insert(std::make_pair(
-            timestep, SIPPInterval(timestep, next_interval.low, NO_AGENT)));
+            timestep,
+            std::move(SIPPInterval(timestep, next_interval.low, NO_AGENT))));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -399,7 +401,7 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
     if (current_interval.high == high) {
         current_interval.high = low;
         location_intervals.insert(
-            std::make_pair(low, SIPPInterval(low, high, agent_id)));
+            std::make_pair(low, std::move(SIPPInterval(low, high, agent_id))));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -412,8 +414,8 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
         int new_high = current_interval.high;
         current_interval.high = high;
         current_interval.agent_id = agent_id;
-        location_intervals.insert(
-            std::make_pair(high, SIPPInterval(high, new_high, NO_AGENT)));
+        location_intervals.insert(std::make_pair(
+            high, std::move(SIPPInterval(high, new_high, NO_AGENT))));
 
 #ifdef DEBUG_MODE
         this->validate(location);
@@ -425,10 +427,10 @@ void SIPPIntervals::split(int agent_id, int location, int low, int high) {
     if (current_interval.low < low && current_interval.high > high) {
         int new_high = current_interval.high;
         current_interval.high = low;
+        location_intervals.insert(std::make_pair(
+            high, std::move(SIPPInterval(high, new_high, NO_AGENT))));
         location_intervals.insert(
-            std::make_pair(high, SIPPInterval(high, new_high, NO_AGENT)));
-        location_intervals.insert(
-            std::make_pair(low, SIPPInterval(low, high, agent_id)));
+            std::make_pair(low, std::move(SIPPInterval(low, high, agent_id))));
 
 #ifdef DEBUG_MODE
         this->validate(location);

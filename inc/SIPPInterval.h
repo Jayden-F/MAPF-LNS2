@@ -84,7 +84,7 @@ class SIPPIntervals {
   private:
     void init_location(int location) {
         intervals_[location].insert(
-            std::make_pair(0, SIPPInterval(0, MAX_TIMESTEP)));
+            std::make_pair(0, std::move(SIPPInterval(0, MAX_TIMESTEP))));
     }
     void split(int agent_id, int location, int low, int high);
     void merge(int agent_id, int location, int low, int high);
