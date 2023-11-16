@@ -30,15 +30,6 @@ SIPPIntervals::get_intervals(int from, iterator from_current_iterator,
     if (intervals_[to].empty())
         this->init_location(to);
 
-    // cout << from_current_iterator->first << " "
-    //      << from_current_iterator->second.low << " "
-    //      << from_current_iterator->second.high << " "
-    //      << from_current_iterator->second.agent_id << endl;
-    // for (auto i = intervals_[to].begin(); i != intervals_[to].end(); i++) {
-    //     cout << i->first << " " << i->second.low << " " << i->second.high <<
-    //     " "
-    //          << i->second.agent_id << endl;
-    // }
 
     iterator low_iterator = this->intervals_[to].upper_bound(timestep);
     low_iterator--;
